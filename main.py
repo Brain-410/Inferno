@@ -15,9 +15,9 @@ while running == True:
 
     
     connection.background(screen, dt) #temporary
-    offset = connection.player(screen, dt)
-    connection.objects(screen, dt, offset)
-    #connection.entities(screen, dt, offset)
+    attributes = connection.player(screen, dt)
+    connection.objects(screen, attributes)
+    #connection.entities(screen, dt, attributes)
 
     pygame.display.flip()
 
