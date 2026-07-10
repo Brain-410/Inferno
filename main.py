@@ -10,12 +10,12 @@ while running == True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-    
-    connection.background(screen)
-    attributes = connection.player_data(dt)
+
+    connection.clear(screen)
+    attributes = connection.player_data(screen, dt)
     connection.objects(screen, attributes)
-    data = connection.attacks(screen, dt)
-    connection.entities(screen, dt, attributes, data)
+    connection.attacks(screen, dt)
+    connection.entities(screen, dt, attributes)
     connection.player_render(screen)
     connection.summon_entity()
 
