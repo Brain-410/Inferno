@@ -1,6 +1,6 @@
 import pygame
 import Backend.Media.asset_library as asset_library
-import datetime
+import datetime, copy
 
 class Object:
     def display(self, screen, type, data):
@@ -52,9 +52,9 @@ class Entity(Object):
         Object.display(self, screen, -2, self.rect_data)
 
     def move(self, data):
+        
         Object.move(self, data[0]) #Player movement offset
-
-
+        self.frame_start_position = copy.copy(self.position)
         # Player targeting movement
         distance = (pygame.Vector2(640, 400) - self.rect_data.center).magnitude_squared()
         self.__dx = (pygame.Vector2(640, 400) - self.rect_data.center).normalize()
@@ -99,7 +99,9 @@ class Entity(Object):
             self.__stunned = False
 
         #final update
+        self.velocity = self.position - self.frame_start_position
         self.rect_data.center = self.position
+
 
     def take_damage(self, attack_data, amount):
         if self.rect_data.colliderect(attack_data) and (datetime.datetime.now() - self.__last_took_damage).total_seconds() > 0.5:
@@ -135,35 +137,34 @@ class Entity(Object):
         #Checking all tiles the entity is touching
         for row in range(start_row, end_row):   
             for column in range(start_col, end_col):
-                #print("HIIIII")
 
                 index = (row * map_columns) + column
                 object_rect = pygame.rect.Rect(column * tile_width - camera_pos.x, row * tile_height - camera_pos.y, tile_width, tile_height)
+                print(self.velocity)
 
-                #print(object_list[index])
+                dx, dy = 0, 0
+                #from left
+                if abs(self.rect_data.right - object_rect.left) < abs(object_rect.right - self.rect_data.left):
+                    dx = self.rect_data.right - object_rect.left
+                else: #from right
+                    dx = self.rect_data.left - object_rect.right
+                #from bottom
+                if abs(self.rect_data.bottom - object_rect.top) < abs(object_rect.bottom - self.rect_data.top):
+                    dy = self.rect_data.bottom - object_rect.top
+                else: #from top
+                    dy = self.rect_data.top - object_rect.bottom
+
+
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
-                    print(object_rect)
-                    print(self.rect_data)
-
-                    dx, dy = 0, 0
-                    #from left
-                    if abs(self.rect_data.right - object_rect.left) < abs(object_rect.right - self.rect_data.left):
-                        dx = self.rect_data.right - object_rect.left
-                        print(f"1, {dx}")
-                    else: #from right
-                        dx = self.rect_data.left - object_rect.right
-                        print(f'2, {dx}')
-                    #from bottom
-                    if abs(self.rect_data.bottom - object_rect.top) < abs(object_rect.bottom - self.rect_data.top):
-                        dy = self.rect_data.bottom - object_rect.top
-                        print(f"3, {dy}")
-                    else: #from top
-                        dy = self.rect_data.top - object_rect.bottom
-                        print(f"4, {dy}")   
-
-                    print(max(dx, dy))
                     
+                    if abs(dx) < abs(dy):
+                        self.position.x -= self.velocity.x
+                        self.__true_data[0] -= self.velocity.x
+                    else:
+                        self.position.y -= self.velocity.y
+                        self.__true_data[1] -= self.velocity.y
                     
+                
                     self.rect_data.center = self.position
         #print("\n\n\n")
 
