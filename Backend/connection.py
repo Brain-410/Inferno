@@ -15,7 +15,7 @@ with open("Backend\\Media\\test.json", "r") as file:
 file.close()
 
 
-character = general.Player(2, pygame.rect.Rect(0, 0, 32, 48))
+character = general.Player(2, pygame.rect.Rect(0, 0, 32, 32))
 general_object = general.Object()
 entity_list = []
 alive_entities = 0
@@ -34,11 +34,12 @@ def player_data(screen, dt):
     character.dt = dt
     character.move()
     character.calculate_real_data(screen)
+    character.collide(data)
     do_attack = character.attack()
     if do_attack[0] == True:
         attack_objects.append(general.Attack(*do_attack[1]))
 
-    return character.velocity, character.rect_data, character.real_data  # data needed for rendering motion
+    return character.velocity, character.rect_data, character.visual_data  # data needed for rendering motion
 
 def player_render(screen):
     character.display(screen)
@@ -46,7 +47,6 @@ def player_render(screen):
 
 
 def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with movement
-    global data
     for i in range(entities_num):
         entity = entity_list[i]
         entity.display(screen)
@@ -91,7 +91,7 @@ def summon_entity(player_true_data):
             case 4: # Bottom
                 position_x = random.randint(0, 1280)
                 position_y = 820
-        entity_list.append(general.Entity(pygame.rect.Rect(300, 300, 32, 32), 50, 30, 1000, 50, player_true_data))
+        entity_list.append(general.Entity(pygame.rect.Rect(800, 300, 32, 32), 50, 30, 1000, 50, player_true_data))
         alive_entities += 1
         entities_num += 1
         entity_list.sort(key=lambda x:  x.rect_data.left)
@@ -112,7 +112,6 @@ def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movemen
 
             position_x, position_y = col * TILE_WIDTH - camera_pos.x, row * TILE_HEIGHT - camera_pos.y  # Tile Position
             obj_rect = pygame.rect.Rect(position_x, position_y, TILE_WIDTH, TILE_HEIGHT)
-            #print(obj_rect)
             
             general_object.display(screen, object_list[index], obj_rect)
 

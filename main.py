@@ -1,4 +1,4 @@
-import pygame, Backend.connection as connection
+import pygame, Backend.connection as connection, Backend.Media.asset_library as asset_library
 
 running = True
 pygame.init()
@@ -23,4 +23,4 @@ while running == True:
 
 pygame.quit()
 
-#a
+#

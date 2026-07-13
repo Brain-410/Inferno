@@ -1,6 +1,7 @@
 import pygame
 #Must use primitive datatypes (integers) for optimisation, so descriptions are placed as commas
 asset_library = { 
+    3: pygame.Surface((1, 5)),
     2: pygame.Surface((5, 5)),
     1: pygame.Surface((32, 32)), # Floor
     0: pygame.Surface((0, 0)), #Blank area (i.e. void)
@@ -14,6 +15,7 @@ asset_library = {
 
 
 #temporary, will remove when proper assets are made
+asset_library[3].fill((0, 255, 255))
 asset_library[2].fill((255, 0, 255))
 asset_library[1].fill((255, 255, 255))
 asset_library[-1.1].fill((0, 0, 255)) 
