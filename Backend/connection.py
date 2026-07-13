@@ -3,7 +3,7 @@ import Backend.general as general
 import json
 import random, datetime
 
-MAX_ENEMIES = 10
+MAX_ENEMIES = 1
 
 with open("Backend\\Media\\test.json", "r") as file:
     data = json.load(file)
@@ -15,9 +15,11 @@ with open("Backend\\Media\\test.json", "r") as file:
 file.close()
 
 
-character = general.Player(2, pygame.rect.Rect(100, 100, 64, 64))
+character = general.Player(2, pygame.rect.Rect(0, 0, 32, 48))
 general_object = general.Object()
 entity_list = []
+alive_entities = 0
+entities_num = 0
 attack_objects = []
 
 def attacks(screen, dt):
@@ -43,20 +45,40 @@ def player_render(screen):
     character.attack()
 
 
-
 def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with movement
-    for entity in entity_list:
+    global data
+    for i in range(entities_num):
+        entity = entity_list[i]
         entity.display(screen)
         entity.move(player_attributes)
         for attack in attack_objects:
             if entity.take_damage(attack.rect_data, attack.damage):
-                entity_list.remove(entity)
+                alive_entities -= 1
         entity.dt = dt
-        
 
-def summon_entity():
-    if random.randint(0, 99) == 1 and len(entity_list) < MAX_ENEMIES:
-        match random.randint(1, 4):
+        for other_entity in range(i+1, entities_num):
+            entity_2 = entity_list[other_entity]
+            if entity_2.rect_data.left > entity.rect_data.right:
+                break
+
+            difference = entity.position - entity_2.position
+            if difference.magnitude_squared() <= (entity.rect_data.width / 2)**2 :
+                force = difference.normalize()
+                entity.position += force
+                entity.position_change += force
+                entity_2.position -= force
+                entity_2.position_change -= force
+        
+        
+        entity.collide(data)
+
+
+
+
+def summon_entity(player_true_data):
+    global alive_entities, entities_num
+    if random.randint(0, 99) == 1 and alive_entities < MAX_ENEMIES:
+        match random.randint(2, 2):
             case 1: # Top
                 position_x = random.randint(0, 1280)
                 position_y = -20
@@ -69,7 +91,10 @@ def summon_entity():
             case 4: # Bottom
                 position_x = random.randint(0, 1280)
                 position_y = 820
-        entity_list.append(general.Entity(pygame.rect.Rect(position_x, position_y, 32, 32), 50, 30, 600, 50))
+        entity_list.append(general.Entity(pygame.rect.Rect(300, 300, 32, 32), 50, 30, 1000, 50, player_true_data))
+        alive_entities += 1
+        entities_num += 1
+        entity_list.sort(key=lambda x:  x.rect_data.left)
 
 def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movement
     camera_pos = pygame.Vector2(player_attributes[1].left - screen.get_width()//2, player_attributes[1].top - screen.get_height()//2)
@@ -87,6 +112,7 @@ def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movemen
 
             position_x, position_y = col * TILE_WIDTH - camera_pos.x, row * TILE_HEIGHT - camera_pos.y  # Tile Position
             obj_rect = pygame.rect.Rect(position_x, position_y, TILE_WIDTH, TILE_HEIGHT)
+            #print(obj_rect)
             
             general_object.display(screen, object_list[index], obj_rect)
 

@@ -17,8 +17,10 @@ while running == True:
     connection.attacks(screen, dt)
     connection.entities(screen, dt, attributes)
     connection.player_render(screen)
-    connection.summon_entity()
+    connection.summon_entity(attributes)
 
     pygame.display.flip()
 
 pygame.quit()
+
+#
