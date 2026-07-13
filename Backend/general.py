@@ -117,52 +117,42 @@ class Entity(Object):
         tile_width = tile_data["tilewidth"]
         tile_height = tile_data["tileheight"]
         object_list = tile_data["layers"][0]["data"]
-        map_rows = tile_data["height"]
         map_columns = tile_data["width"]
-
-
 
         start_col = int(self.__true_data[0] // tile_width )
         end_col = int((self.__true_data[0] + self.__true_data[2]) // tile_width + 1)
         start_row = int(self.__true_data[1] // tile_height)
         end_row = int((self.__true_data[1] + self.__true_data[3]) // tile_height + 1)
 
-
-        #print(start_col, end_col, start_row, end_row)
-
-        if (start_col or end_col or start_row or end_row) < 0:
+        if (start_col or end_col or start_row or end_row) < 0: # tilemap only includes positive regions, so this would break at be looking at the wrong numbers
             return
         camera_pos = pygame.Vector2(self.__player_data[1].left - 640, self.__player_data[1].top - 400)
-        #print(f"pos: {self.position} \nvel: {self.velocity} \ntrue_pos: {self.__true_data}")
 
-        #Checking all tiles the entity is touching
         for row in range(start_row, end_row):   
             for column in range(start_col, end_col):
 
                 index = (row * map_columns) + column
 
-
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
                     object_rect = pygame.rect.Rect(column * tile_width - camera_pos.x, row * tile_height - camera_pos.y, tile_width, tile_height)
                     dx = min(abs(self.rect_data.right - object_rect.left), abs(self.rect_data.left - object_rect.right))
                     dy = min(abs(self.rect_data.bottom - object_rect.top), abs(self.rect_data.top - object_rect.bottom))
+                    # horizontal/vertical intersection with the object - how much the entity is moving into the object per direction
 
-                    #print(f"dx:dy, {dx}:{dy}")
-                    
                     index = (row * map_columns) + column
                     object_rect = pygame.rect.Rect(column * tile_width - camera_pos.x, row * tile_height - camera_pos.y, tile_width, tile_height)
 
-                    if abs(dx) < abs(dy):
+                    if abs(dx) < abs(dy): # if the movement into the object is primarily vertical
                         while self.rect_data.colliderect(object_rect):
                             self.position.x -= self.velocity.x
                             self.__true_data[0] -= self.velocity.x 
                             self.rect_data.center = self.position
-                    else:
+                    else: # if the movement into the object is primarily horizontal
                         while self.rect_data.colliderect(object_rect):
                             self.position.y -= self.velocity.y
                             self.__true_data[1] -= self.velocity.y
                             self.rect_data.center = self.position
-                    if (self.position - self.frame_start_position).magnitude_squared() > (self.__max_speed + 1)**2:
+                    if (self.position - self.frame_start_position).magnitude_squared() > (self.__max_speed + 1)**2: # prevents sometimes clipping between corners
                         offset = self.velocity
                         self.position = self.frame_start_position + offset
                         self.__true_data[0], self.__true_data[1] = self.frame_start_position_true[0] + offset.x, self.frame_start_position_true[1] + offset.y

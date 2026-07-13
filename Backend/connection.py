@@ -68,8 +68,7 @@ def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mo
                 entity.position_change += force
                 entity_2.position -= force
                 entity_2.position_change -= force
-        
-        
+
         entity.collide(data)
 
 
@@ -78,7 +77,7 @@ def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mo
 def summon_entity(player_true_data):
     global alive_entities, entities_num
     if random.randint(0, 99) == 1 and alive_entities < MAX_ENEMIES:
-        match random.randint(2, 2):
+        match random.randint(1, 4):
             case 1: # Top
                 position_x = random.randint(0, 1280)
                 position_y = -20
@@ -91,7 +90,7 @@ def summon_entity(player_true_data):
             case 4: # Bottom
                 position_x = random.randint(0, 1280)
                 position_y = 820
-        entity_list.append(general.Entity(pygame.rect.Rect(800, 300, 32, 32), 50, 30, 1000, 50, player_true_data))
+        entity_list.append(general.Entity(pygame.rect.Rect(position_x, position_y, 32, 32), 50, 30, 1000, 50, player_true_data))
         alive_entities += 1
         entities_num += 1
         entity_list.sort(key=lambda x:  x.rect_data.left)
