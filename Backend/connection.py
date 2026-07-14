@@ -15,7 +15,7 @@ with open("Backend\\Media\\test.json", "r") as file:
 file.close()
 
 
-character = general.Player(2, pygame.rect.Rect(0, 0, 32, 32))
+character = None
 general_object = general.Object()
 entity_list = []
 alive_entities = 0
@@ -31,18 +31,19 @@ def attacks(screen, dt):
     
 
 def player_data(screen, dt):
+    global character
+    if character == None:
+        character = general.Player(2, pygame.rect.Rect(0, 0, 32, 32), screen, (TILE_WIDTH, TILE_HEIGHT))
     character.dt = dt
     character.move()
-    character.calculate_real_data(screen)
-    character.collide(data)
     do_attack = character.attack()
     if do_attack[0] == True:
         attack_objects.append(general.Attack(*do_attack[1]))
 
-    return character.velocity, character.rect_data, character.visual_data  # data needed for rendering motion
+    return character.velocity, character.rect_data, character.visual_data, character.camera_pos  # data needed for rendering motion
 
-def player_render(screen):
-    character.display(screen)
+def player_render():
+    character.display()
     character.attack()
 
 
@@ -96,7 +97,8 @@ def summon_entity(player_true_data):
         entity_list.sort(key=lambda x:  x.rect_data.left)
 
 def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movement
-    camera_pos = pygame.Vector2(player_attributes[1].left - screen.get_width()//2, player_attributes[1].top - screen.get_height()//2)
+    camera_pos = player_attributes[3]
+
     # Calculate which tiles are on the screen. Reduces lag, no need to render every tile
     start_col = max(0, int(camera_pos.x // TILE_WIDTH - 1))
     end_col = min(map_col, int((camera_pos.x + screen.get_width()) // TILE_WIDTH + 1))

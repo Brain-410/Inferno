@@ -159,25 +159,25 @@ class Entity(Object):
                     self.rect_data.center = self.position
 
 class Player(Object):
-    def __init__(self, max_speed, data):
+    def __init__(self, max_speed, data, screen, tile_data):
         self.rect_data = data
-
+        self.rect_data.center += pygame.Vector2(tile_data[0], tile_data[1])
+        self.screen = screen
         
+        self.tile_width = tile_data[0]
+        self.tile_height = tile_data[1]
+        x_real = self.screen.get_width() // 2 - self.rect_data.width
+        y_real = self.screen.get_height() // 2 - self.rect_data.height
+        self.visual_data = pygame.rect.Rect(x_real, y_real, self.rect_data.width, self.rect_data.height)
+
         self.__max_speed = max_speed
         self.__acceleration = 15
         self.velocity = pygame.Vector2(0, 0)
         self.__type = -1.1
         self.__time_of_last_attack = datetime.datetime.now()
         self.damage_data = None
-
-    def calculate_real_data(self, screen):
-        x_real = screen.get_width() // 2  - self.rect_data.width
-        y_real = screen.get_height() // 2  - self.rect_data.height
-        self.visual_data = pygame.rect.Rect(x_real, y_real, self.rect_data.width, self.rect_data.height)
-        self.camera_pos = pygame.Vector2(self.rect_data.left - 640, self.rect_data.top - 400)
-
     
-    def display(self, screen):
+    def display(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]: # Forward
             if abs(self.velocity.y) < abs(self.velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
@@ -196,7 +196,7 @@ class Player(Object):
         # It also works so if you stop pressing anything the character still faces the same direction.
 
 
-        Object.display(self, screen, self.__type, self.visual_data)
+        Object.display(self, self.screen, self.__type, self.visual_data)
     
     def attack(self):
         #Holy laser beam
@@ -262,6 +262,9 @@ class Player(Object):
             else:
                 self.velocity.y *= 0.85
         self.rect_data.center += self.velocity
+        self.camera_pos = self.rect_data.center - pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2  - pygame.Vector2(self.tile_width, self.tile_height)//2
+
+        print(self.rect_data)
     
     def collide(self, tile_data):
         #entity-tilemap collision
@@ -283,7 +286,7 @@ class Player(Object):
         if (start_col or end_col or start_row or end_row) < 0:
             return
 
-        print(f"vel: {self.velocity} \ntrue_pos: {self.rect_data} \ncamera_pos: {self.camera_pos}")
+        #print(f"vel: {self.velocity} \ntrue_pos: {self.rect_data} \ncamera_pos: {self.camera_pos}")
 
         #Checking all tiles the entity is touching
         for row in range(start_row, end_row):   
