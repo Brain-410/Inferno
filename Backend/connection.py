@@ -39,6 +39,8 @@ def player_data(screen, dt):
     do_attack = character.attack()
     if do_attack[0] == True:
         attack_objects.append(general.Attack(*do_attack[1]))
+    
+    character.collide(data)
 
     return character.velocity, character.rect_data, character.visual_data, character.camera_pos  # data needed for rendering motion
 
@@ -70,7 +72,7 @@ def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mo
                 entity_2.position -= force
                 entity_2.position_change -= force
 
-        entity.collide(data)
+        entity.collide(data, player_attributes)
 
 
 
