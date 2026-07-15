@@ -153,7 +153,7 @@ class Entity(Object):
                             self.position.y -= self.velocity.y
                             self.__true_data[1] -= self.velocity.y
                             self.rect_data.center = self.position
-                    if (self.position - self.frame_start_position).magnitude_squared() > (self.__max_speed + 1)**2: # prevents sometimes clipping between corners
+                    if (self.position - self.frame_start_position).magnitude_squared() > (self.__max_speed + 1)**2: # prevents occasional clipping between corners
                         offset = self.velocity
                         self.position = self.frame_start_position + offset
                         self.__true_data[0], self.__true_data[1] = self.frame_start_position_true[0] + offset.x, self.frame_start_position_true[1] + offset.y
@@ -263,7 +263,7 @@ class Player(Object):
             else:
                 self.velocity.y *= 0.85
         self.rect_data.center += self.velocity
-        self.camera_pos = self.rect_data.center - pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2  - pygame.Vector2(self.rect_data.width, self.rect_data.height)//2
+        self.camera_pos = self.rect_data.topleft - pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2
 
 
     def collide(self, tile_data):
