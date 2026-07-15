@@ -1,4 +1,4 @@
-import pygame, Backend.connection as connection, Backend.Media.asset_library as asset_library
+import pygame, Backend.connection as connection
 
 running = True
 pygame.init()
@@ -6,7 +6,7 @@ screen = pygame.display.set_mode((0, 0))
 clock = pygame.time.Clock()
 
 while running == True:
-    dt = clock.tick(60)/1000
+    dt = clock.tick (60)/1000
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -23,4 +23,4 @@ while running == True:
 
 pygame.quit()
 
-#   
+#aaad

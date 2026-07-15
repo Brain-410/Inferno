@@ -36,12 +36,12 @@ def player_data(screen, dt):
         character = general.Player(2, pygame.rect.Rect(0, 0, 48, 48), screen, (TILE_WIDTH, TILE_HEIGHT))
     character.dt = dt
     character.move()
+    character.collide(data)
     do_attack = character.attack()
     if do_attack[0] == True:
         attack_objects.append(general.Attack(*do_attack[1]))
     
-    character.collide(data)
-
+    print(character.velocity)
     return character.velocity, character.rect_data, character.visual_data, character.camera_pos  # data needed for rendering motion
 
 def player_render():
@@ -59,6 +59,7 @@ def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mo
                 alive_entities -= 1
         entity.dt = dt
 
+        #entity-entity collision
         for other_entity in range(i+1, entities_num):
             entity_2 = entity_list[other_entity]
             if entity_2.rect_data.left > entity.rect_data.right:
