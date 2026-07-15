@@ -33,7 +33,7 @@ def attacks(screen, dt):
 def player_data(screen, dt):
     global character
     if character == None:
-        character = general.Player(2, pygame.rect.Rect(0, 0, 32, 32), screen, (TILE_WIDTH, TILE_HEIGHT))
+        character = general.Player(2, pygame.rect.Rect(0, 0, 48, 48), screen, (TILE_WIDTH, TILE_HEIGHT))
     character.dt = dt
     character.move()
     do_attack = character.attack()
@@ -93,7 +93,7 @@ def summon_entity(player_true_data):
             case 4: # Bottom
                 position_x = random.randint(0, 1280)
                 position_y = 820
-        entity_list.append(general.Entity(pygame.rect.Rect(position_x, position_y, 32, 32), 50, 30, 1000, 50, player_true_data))
+        entity_list.append(general.Entity(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 1000, 50, player_true_data))
         alive_entities += 1
         entities_num += 1
         entity_list.sort(key=lambda x:  x.rect_data.left)

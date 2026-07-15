@@ -104,6 +104,7 @@ class Entity(Object):
         self.rect_data.center = self.position
 
 
+
     def take_damage(self, attack_data, amount):
         if self.rect_data.colliderect(attack_data) and (datetime.datetime.now() - self.__last_took_damage).total_seconds() > 0.5:
             self.__last_took_damage = datetime.datetime.now()
@@ -236,6 +237,7 @@ class Player(Object):
 
     def move(self):
         keys = pygame.key.get_pressed()
+        #horizontal motion
         if keys[pygame.K_a]:
             self.velocity.x -= self.__acceleration * self.dt
             if abs(self.velocity.x) >= self.__max_speed:
@@ -249,6 +251,7 @@ class Player(Object):
                 self.velocity.x = 0
             else:
                 self.velocity.x *= 0.85
+        #vertical motion
         if keys[pygame.K_w]:
             self.velocity.y -= self.__acceleration * self.dt
             if abs(self.velocity.y) >= self.__max_speed:
@@ -281,12 +284,6 @@ class Player(Object):
         start_row = int(self.rect_data.top // tile_height - 1)
         end_row = int(self.rect_data.bottom // tile_height)
 
-
-
-        print(start_col, end_col, start_row, end_row)
-
-
-
         #Checking all tiles the entity is touching
         for row in range(start_row, end_row):  
             for column in range(start_col, end_col):
@@ -296,7 +293,15 @@ class Player(Object):
                 object_rect = pygame.rect.Rect(column * tile_width - self.camera_pos.x, row * tile_height - self.camera_pos.y, tile_width, tile_height)
 
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
-                    print(self.visual_data)
-                    print(object_rect)
+                    
+                    dx = min(abs(self.visual_data.right - object_rect.left), abs(self.visual_data.left - object_rect.right))
+                    dy = min(abs(self.visual_data.bottom - object_rect.top), abs(self.visual_data.top - object_rect.bottom))
+
+                    print(dx, dy)
                     if self.visual_data.colliderect(object_rect):
-                        print("HI")
+                        if dx < dy:
+                            self.rect_data.centerx -= self.velocity.x
+                            self.velocity.x = 0
+                        else:
+                            self.rect_data.centery -= self.velocity.y
+                            self.velocity.y = 0

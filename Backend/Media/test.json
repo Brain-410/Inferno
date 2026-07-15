@@ -38,13 +38,13 @@
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.12.2",
- "tileheight":32,
+ "tileheight":48,
  "tilesets":[
         {
          "firstgid":1,
          "source":"pixil-frame-0.tsx"
         }],
- "tilewidth":32,
+ "tilewidth":48,
  "type":"map",
  "version":"1.10",
  "width":30
