@@ -3,7 +3,7 @@ import Backend.general as general
 import json
 import random, datetime
 
-MAX_ENEMIES = 1
+MAX_ENEMIES = 5
 
 with open("Backend\\Media\\test.json", "r") as file:
     data = json.load(file)
@@ -41,7 +41,6 @@ def player_data(screen, dt):
     if do_attack[0] == True:
         attack_objects.append(general.Attack(*do_attack[1]))
     
-    print(character.velocity)
     return character.velocity, character.rect_data, character.visual_data, character.camera_pos  # data needed for rendering motion
 
 def player_render():
@@ -69,9 +68,12 @@ def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mo
             if difference.magnitude_squared() <= (entity.rect_data.width / 2)**2 :
                 force = difference.normalize()
                 entity.position += force
-                entity.position_change += force
+                entity.true_data[0] += force.x
+                entity.true_data[1] += force.y
+
                 entity_2.position -= force
-                entity_2.position_change -= force
+                entity_2.true_data[0] -= force.x
+                entity_2.true_data[1] -= force.y
 
         entity.collide(data, player_attributes)
 

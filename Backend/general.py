@@ -36,8 +36,8 @@ class Entity(Object):
         self.rect_data = data
         self.position = self.rect_data.center
         self.__player_data = player_data
-        self.__true_data = [data.left - (player_data[2].right - player_data[1].left), data.top - (player_data[2].bottom - player_data[1].top), data.width, data.height]
-        #self.__true_data = [data.left - 640, data.top - 400, data.width, data.height]
+        self.true_data = [data.left - (player_data[2].right - player_data[1].left), data.top - (player_data[2].bottom - player_data[1].top), data.width, data.height]
+        #self.true_data = [data.left - 640, data.top - 400, data.width, data.height]
         
         self.__knockback_velocity = pygame.Vector2(0, 0)
         self.__stunned = False
@@ -55,7 +55,7 @@ class Entity(Object):
 
         Object.move(self, data[0]) #Player movement offset
         self.frame_start_position = copy.copy(self.position)
-        self.frame_start_position_true = copy.copy(self.__true_data)
+        self.frame_start_position_true = copy.copy(self.true_data)
 
         # Player targeting movement
         distance = (pygame.Vector2(640, 400) - self.rect_data.center).magnitude_squared()
@@ -69,12 +69,12 @@ class Entity(Object):
         if self.__aggro and self.__stunned == False and self.hp > 0:
             if distance > self.__max_distance_squared:
                 self.position += self.__dx * self.__max_speed * self.dt
-                self.__true_data[0] += self.__dx.x * self.__max_speed * self.dt
-                self.__true_data[1] += self.__dx.y * self.__max_speed * self.dt
+                self.true_data[0] += self.__dx.x * self.__max_speed * self.dt
+                self.true_data[1] += self.__dx.y * self.__max_speed * self.dt
             else:
                 self.position -= self.__dx * self.__max_speed * 0.5 * self.dt
-                self.__true_data[0] -= self.__dx.x * self.__max_speed * 0.5 * self.dt
-                self.__true_data[1] -= self.__dx.y * self.__max_speed * 0.5 * self.dt
+                self.true_data[0] -= self.__dx.x * self.__max_speed * 0.5 * self.dt
+                self.true_data[1] -= self.__dx.y * self.__max_speed * 0.5 * self.dt
 
 
         #player-entity collision
@@ -83,15 +83,15 @@ class Entity(Object):
                                    data[2].width, data[2].height)
         while self.rect_data.colliderect(new_pos):
             self.position -= self.__dx * 0.5
-            self.__true_data[0] -= self.__dx.x * 0.5
-            self.__true_data[1] -= self.__dx.y * 0.5
+            self.true_data[0] -= self.__dx.x * 0.5
+            self.true_data[1] -= self.__dx.y * 0.5
             self.rect_data.center = self.position
 
 
         #attack knockback/stun
         self.position -= self.__knockback_velocity
-        self.__true_data[0] -= self.__knockback_velocity.x
-        self.__true_data[1] -= self.__knockback_velocity.y
+        self.true_data[0] -= self.__knockback_velocity.x
+        self.true_data[1] -= self.__knockback_velocity.y
         self.__knockback_velocity *= 0.9
         if self.__knockback_velocity.magnitude_squared() <= 1:
             self.__knockback_velocity = pygame.Vector2(0, 0)
@@ -120,12 +120,11 @@ class Entity(Object):
         object_list = tile_data["layers"][0]["data"]
         map_columns = tile_data["width"]
 
-        start_col = int(self.__true_data[0] // tile_width )
-        end_col = int((self.__true_data[0] + self.__true_data[2]) // tile_width + 1)
-        start_row = int(self.__true_data[1] // tile_height)
-        end_row = int((self.__true_data[1] + self.__true_data[3]) // tile_height + 1)
+        start_col = int(self.true_data[0] // tile_width )
+        end_col = int((self.true_data[0] + self.true_data[2]) // tile_width + 1)
+        start_row = int(self.true_data[1] // tile_height)
+        end_row = int((self.true_data[1] + self.true_data[3]) // tile_height + 1)
 
-        #print(start_col, int(self.rect_data.left // tile_width))
 
         if (start_col or end_col or start_row or end_row) < 0: # tilemap only includes positive regions, so this would exit when looking at an invalid range
             return
@@ -139,7 +138,7 @@ class Entity(Object):
 
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
                     object_rect = pygame.rect.Rect(column * tile_width - camera_pos.x, row * tile_height - camera_pos.y, tile_width, tile_height)
-                    #print(f"obj: {object_rect}")
+
                     dx = min(abs(self.rect_data.right - object_rect.left), abs(self.rect_data.left - object_rect.right))
                     dy = min(abs(self.rect_data.bottom - object_rect.top), abs(self.rect_data.top - object_rect.bottom))
                     # horizontal/vertical intersection with the object - how much the entity is moving into the object per direction
@@ -150,18 +149,17 @@ class Entity(Object):
                     if abs(dx) < abs(dy): # if the movement into the object is primarily vertical
                         while self.rect_data.colliderect(object_rect):
                             self.position.x -= self.velocity.x
-                            self.__true_data[0] -= self.velocity.x 
+                            self.true_data[0] -= self.velocity.x 
                             self.rect_data.center = self.position
                     else: # if the movement into the object is primarily horizontal
                         while self.rect_data.colliderect(object_rect):
                             self.position.y -= self.velocity.y
-                            self.__true_data[1] -= self.velocity.y
+                            self.true_data[1] -= self.velocity.y
                             self.rect_data.center = self.position
                     if (self.position - self.frame_start_position).magnitude_squared() > (self.__max_speed + 1)**2: # prevents occasional clipping between corners
                         offset = self.velocity
                         self.position = self.frame_start_position + offset
-                        self.__true_data[0], self.__true_data[1] = self.frame_start_position_true[0] + offset.x, self.frame_start_position_true[1] + offset.y
-                        print("4")
+                        self.true_data[0], self.true_data[1] = self.frame_start_position_true[0] + offset.x, self.frame_start_position_true[1] + offset.y
                     self.rect_data.center = self.position
 
 class Player(Object):
@@ -180,7 +178,6 @@ class Player(Object):
         self.camera_pos = data.topleft - pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2
 
 
-        self.allowed_movement_direction = [True, True, True, True]
         self.__max_speed = max_speed
         self.__acceleration = 15
         self.velocity = pygame.Vector2(0, 0)
@@ -284,7 +281,6 @@ class Player(Object):
         tile_width = tile_data["tilewidth"]
         tile_height = tile_data["tileheight"]
         object_list = tile_data["layers"][0]["data"]
-        map_rows = tile_data["height"]
         map_columns = tile_data["width"]
 
         start_col = int(self.rect_data.left // tile_width - 1)
@@ -292,33 +288,29 @@ class Player(Object):
         start_row = int(self.rect_data.top // tile_height - 1)
         end_row = int(self.rect_data.bottom // tile_height)
 
-        print(f"{start_col}:{end_col} {start_row}:{end_row}")
-
         self.original_velocity = copy.copy(self.velocity)
         #Checking all tiles the entity is touching
         for row in range(start_row, end_row):  
             for column in range(start_col, end_col):
 
                 index = (row * map_columns) + column
-                print(f"Index: {index}")
                 object_rect = pygame.rect.Rect(column * tile_width - self.camera_pos.x, row * tile_height - self.camera_pos.y, tile_width, tile_height)
 
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
-                    print("HI")
+                    # checking which direction it should be moved (and how much)
                     dx = min(abs(self.visual_data.right - object_rect.left), abs(self.visual_data.left - object_rect.right))
                     dy = min(abs(self.visual_data.bottom - object_rect.top), abs(self.visual_data.top - object_rect.bottom))
                     if self.visual_data.colliderect(object_rect):
                         if dx < dy:
                             if self.original_velocity.x > 0:
-                                self.velocity.x = -1
+                                self.velocity.x = -dx
                             else:
-                                self.velocity.x = 1
+                                self.velocity.x = dx
                         else:
                             if self.original_velocity.y > 0:
-                                self.velocity.y = -1
+                                self.velocity.y = -dy
                             else:
-                                self.velocity.y = 1
+                                self.velocity.y = dy
         self.true_center += self.velocity
         self.rect_data.center = self.true_center
-        #self.camera_pos = self.rect_data.topleft - pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2
         self.camera_pos += self.velocity
