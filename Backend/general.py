@@ -165,17 +165,17 @@ class Entity(Object):
 class Player(Object):
     def __init__(self, max_speed, data, screen, tile_data):
         self.rect_data = data
-        self.rect_data.center += pygame.Vector2(tile_data[0], tile_data[1])
+        self.rect_data.center += pygame.Vector2(tile_data[0] + data.width//2, tile_data[1] + data.height//2)
         self.true_center = self.rect_data.center
         self.screen = screen
         
         self.tile_width = tile_data[0]
         self.tile_height = tile_data[1]
-        x_real = self.screen.get_width() // 2 - data.width
-        y_real = self.screen.get_height() // 2 - data.height
+        x_real = self.screen.get_width() // 2 - data.width//2
+        y_real = self.screen.get_height() // 2 - data.height//2
         self.visual_data = pygame.rect.Rect(x_real, y_real, data.width, data.height)
 
-        self.camera_pos = data.topleft - pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2
+        self.camera_pos = data.topleft - pygame.Vector2(self.screen.get_width() + data.width, self.screen.get_height() + data.height)//2
 
 
         self.__max_speed = max_speed
@@ -205,12 +205,12 @@ class Player(Object):
 
 
         Object.display(self, self.screen, self.__type, self.visual_data)
-    
+
     def attack(self):
         #Holy laser beam
         if pygame.mouse.get_pressed()[0] and (datetime.datetime.now() - self.__time_of_last_attack).total_seconds() > 3: # Left mouse button, 3s cooldown
             self.__time_of_last_attack = datetime.datetime.now()
-        
+
         #Mace
         elif pygame.mouse.get_pressed()[2] and (datetime.datetime.now() - self.__time_of_last_attack).total_seconds() > 0.7: # Right mouse button, 0.5s cooldown
             self.__time_of_last_attack = datetime.datetime.now()
@@ -271,9 +271,6 @@ class Player(Object):
                 self.velocity.y = 0
             else:
                 self.velocity.y *= 0.85
-        #self.rect_data.center += self.velocity
-        #self.camera_pos = self.rect_data.topleft - pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2
-
 
     def collide(self, tile_data):
 
