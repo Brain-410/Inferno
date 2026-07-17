@@ -14,7 +14,7 @@ while running == True:
     connection.clear(screen)
     attributes = connection.player_data(screen, dt)
     connection.objects(screen, attributes)
-    connection.attacks(screen, dt)
+    connection.attacks(dt)
     connection.entities(screen, dt, attributes)
     connection.player_render()
     connection.summon_entity(attributes)
@@ -23,4 +23,4 @@ while running == True:
 
 pygame.quit()
 
-#  
+#sssssssssss    aaaaadw

@@ -18,28 +18,30 @@ file.close()
 character = None
 general_object = general.Object()
 entity_list = []
-alive_entities = 0
 entities_num = 0
 attack_objects = []
 
-def attacks(screen, dt):
+def attacks(dt):
     for obj in attack_objects:
-        obj.display(screen)
+        obj.display()
         obj.dt = dt
         if obj.move():
             attack_objects.remove(obj)
-    
+        
 
 def player_data(screen, dt):
     global character
     if character == None:
-        character = general.Player(2, pygame.rect.Rect(0, 0, 48, 48), screen, (TILE_WIDTH, TILE_HEIGHT))
+        character = general.Player(2, pygame.rect.Rect(96, 96, 48, 48), screen, (TILE_WIDTH, TILE_HEIGHT))
     character.dt = dt
     character.move()
     character.collide(data)
-    do_attack = character.attack()
-    if do_attack[0] == True:
-        attack_objects.append(general.Attack(*do_attack[1]))
+    attack_data = character.attack()
+    if attack_data[0] == "Mace":
+        #print(*attack_data[1])
+        attack_objects.append(general.Mace(screen, *attack_data[1]))
+    elif attack_data[0] == "Holy_Ray":
+        attack_objects.append(general.Holy_Ray(screen, *attack_data[1])) 
     
     return character.velocity, character.rect_data, character.visual_data, character.camera_pos  # data needed for rendering motion
 
@@ -47,43 +49,47 @@ def player_render():
     character.display()
     character.attack()
 
-
 def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with movement
+    for entity in entity_list:
+        if entity.is_dead:
+            entity_list.remove(entity)
+    entities_num = len(entity_list)
+    
     for i in range(entities_num):
+
         entity = entity_list[i]
+        entity.dt = dt
         entity.display(screen)
         entity.move(player_attributes)
+        entity.collide(data, player_attributes)
         for attack in attack_objects:
-            if entity.take_damage(attack.rect_data, attack.damage):
-                alive_entities -= 1
-        entity.dt = dt
+            entity.take_damage(attack.rect_data, attack.damage)
+            
 
         #entity-entity collision
-        for other_entity in range(i+1, entities_num):
-            entity_2 = entity_list[other_entity]
-            if entity_2.rect_data.left > entity.rect_data.right:
-                break
+        if entities_num > i:
+            for other_entity in range(i+1, entities_num):
+                entity_2 = entity_list[other_entity]
+                if entity_2.rect_data.left > entity.rect_data.right:
+                    break
 
-            difference = entity.position - entity_2.position
-            if difference.magnitude_squared() <= (entity.rect_data.width / 2)**2 :
-                force = difference.normalize()
-                entity.position += force
-                entity.true_data[0] += force.x
-                entity.true_data[1] += force.y
+                difference = entity.position - entity_2.position
+                if difference.magnitude_squared() <= (entity.rect_data.width / 2)**2 :
+                    force = difference.normalize()
+                    entity.position += force
+                    entity.true_data[0] += force.x
+                    entity.true_data[1] += force.y
 
-                entity_2.position -= force
-                entity_2.true_data[0] -= force.x
-                entity_2.true_data[1] -= force.y
-
-        entity.collide(data, player_attributes)
+                    entity_2.position -= force
+                    entity_2.true_data[0] -= force.x
+                    entity_2.true_data[1] -= force.y
 
 
 
 
 def summon_entity(player_true_data):
-    global alive_entities, entities_num
-    if random.randint(0, 99) == 1 and alive_entities < MAX_ENEMIES:
-        match random.randint(1, 4):
+    if random.randint(0, 99) == 1 and len(entity_list) < MAX_ENEMIES:
+        match random.randint(1, 1):
             case 1: # Top
                 position_x = random.randint(0, 1280)
                 position_y = -20
@@ -96,10 +102,9 @@ def summon_entity(player_true_data):
             case 4: # Bottom
                 position_x = random.randint(0, 1280)
                 position_y = 820
-        entity_list.append(general.Entity(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 1000, 50, player_true_data))
-        alive_entities += 1
-        entities_num += 1
+        entity_list.append(general.Entity(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 1000, 50, player_true_data, entity_list))
         entity_list.sort(key=lambda x:  x.rect_data.left)
+    print(entity_list)
 
 def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movement
     camera_pos = player_attributes[3]
@@ -119,7 +124,7 @@ def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movemen
             position_x, position_y = col * TILE_WIDTH - camera_pos.x, row * TILE_HEIGHT - camera_pos.y  # Tile Position
             obj_rect = pygame.rect.Rect(position_x, position_y, TILE_WIDTH, TILE_HEIGHT)
             
-            general_object.display(screen, object_list[index], obj_rect)
+            general_object.display(screen, object_list[index], obj_rect, 255)
 
 def clear(screen):
     screen.fill("black")

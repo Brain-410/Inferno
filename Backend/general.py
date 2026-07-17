@@ -1,37 +1,59 @@
 import pygame
 import Backend.Media.asset_library as asset_library
-import datetime, copy
+import datetime, copy, math
 
 class Object:
-    def display(self, screen, type, data):
-        screen.blit(pygame.transform.scale(asset_library.asset_library[type], (data.width, data.height)), tuple(data.topleft))
+    def display(self, screen, asset_index, data, opacity):
+        image = asset_library.asset_library[asset_index]
+        image.set_alpha(opacity)
+        screen.blit(pygame.transform.scale(image, (data.width, data.height)), tuple(data.topleft))
 
     def move(self, velocity: pygame.Vector2):
         self.position -= velocity
 
 class Attack(Object):
-    def __init__(self, data, destination, time: float, damage: int, extend: bool):
+    def __init__(self, screen, object_data, time: float, damage: int, asset_index):
         self.dt = 0.016
-        self.rect_data = data
+        self.rect_data = object_data
         self.position = self.rect_data.center
 
         self.damage = damage
-        self.__destination = pygame.Vector2(destination.x + self.rect_data.width//2, destination.y + self.rect_data.height//2)
-        self.__time = time
-        self.__speed = (self.rect_data.center - self.__destination).magnitude() / self.__time
-        self.__dx = (self.__destination - self.rect_data.center).normalize()
+        self.time = time
+        self.__asset_index = asset_index
+        self.__screen = screen
+        self.__opacity = 255
 
-    def display(self, screen):
-        Object.display(self, screen, -3, self.rect_data)
+    def display(self):
+        Object.display(self, self.__screen, self.__asset_index, self.rect_data, self.__opacity)
+    
+
+class Mace(Attack):
+    def __init__(self, screen, object_data, time, damage, asset_index, destination):
+        super().__init__(screen, object_data, time, damage, asset_index)
+        self.__destination = pygame.Vector2(destination.x + self.rect_data.width//2, destination.y + self.rect_data.height//2)
+        self.__speed = (self.rect_data.center - self.__destination).magnitude() / self.time
+        self.__dx = (self.__destination - self.rect_data.center).normalize()
+ 
+    def display(self):
+        super().display()
     def move(self):
         if (self.__destination - self.rect_data.center).magnitude() <= 5:
             return True
         self.position += self.__dx * self.dt * self.__speed
         self.rect_data.center = self.position
 
+class Holy_Ray(Attack):
+    def __init__(self, screen, object_data, time, damage, asset_index, angle):
+        super().__init__(screen, object_data, time, damage, asset_index)
+        self.__angle = angle
+    def display(self):
+        super().display()
+    def extend(self):
+        pass
+
 
 class Entity(Object):
-    def __init__(self, data, max_speed, max_distance, detection_range, hp, player_data):
+    def __init__(self, data, max_speed, max_distance, detection_range, hp, player_data, entity_list):
         self.dt = 0.016
         self.rect_data = data
         self.position = self.rect_data.center
@@ -47,15 +69,25 @@ class Entity(Object):
         self.__aggro = False
         self.hp = hp
         self.__last_took_damage = datetime.datetime.now()
+        self.__dx = pygame.Vector2(0, 0)
+        self.__opacity = 255
+        self.is_dead = False
+        self.__list = entity_list
 
     def display(self, screen):
-        Object.display(self, screen, -2, self.rect_data)
+        if self.hp <= 0:
+            self.__opacity -= 1
+        if self.__opacity <= 0:
+            self.is_dead = True
+
+        Object.display(self, screen, -2, self.rect_data, self.__opacity)
 
     def move(self, data):
 
         Object.move(self, data[0]) #Player movement offset
         self.frame_start_position = copy.copy(self.position)
         self.frame_start_position_true = copy.copy(self.true_data)
+        velocity_offset = pygame.Vector2(0, 0)
 
         # Player targeting movement
         distance = (pygame.Vector2(640, 400) - self.rect_data.center).magnitude_squared()
@@ -66,15 +98,21 @@ class Entity(Object):
         elif distance < self.__detection_range_squared:
             self.__aggro = True
 
-        if self.__aggro and self.__stunned == False and self.hp > 0:
+        if self.__aggro:
             if distance > self.__max_distance_squared:
-                self.position += self.__dx * self.__max_speed * self.dt
-                self.true_data[0] += self.__dx.x * self.__max_speed * self.dt
-                self.true_data[1] += self.__dx.y * self.__max_speed * self.dt
+                if self.__stunned or self.hp <= 0:
+                    velocity_offset += self.__dx * self.__max_speed * self.dt
+                else:
+                    self.position += self.__dx * self.__max_speed * self.dt
+                    self.true_data[0] += self.__dx.x * self.__max_speed * self.dt
+                    self.true_data[1] += self.__dx.y * self.__max_speed * self.dt
             else:
-                self.position -= self.__dx * self.__max_speed * 0.5 * self.dt
-                self.true_data[0] -= self.__dx.x * self.__max_speed * 0.5 * self.dt
-                self.true_data[1] -= self.__dx.y * self.__max_speed * 0.5 * self.dt
+                if self.__stunned or self.hp <= 0:
+                    velocity_offset += self.__dx * self.__max_speed / 2 * self.dt
+                else:
+                    self.position -= self.__dx * self.__max_speed * 0.5 * self.dt
+                    self.true_data[0] -= self.__dx.x * self.__max_speed * 0.5 * self.dt
+                    self.true_data[1] -= self.__dx.y * self.__max_speed * 0.5 * self.dt
 
 
         #player-entity collision
@@ -99,18 +137,20 @@ class Entity(Object):
             self.__stunned = False
 
         #final update
-        self.velocity = self.position - self.frame_start_position
+        self.velocity = self.position - self.frame_start_position + velocity_offset
         self.rect_data.center = self.position
 
 
 
 
     def take_damage(self, attack_data, amount):
+        #print(f"opacity: {self.__opacity}")
         if self.rect_data.colliderect(attack_data) and (datetime.datetime.now() - self.__last_took_damage).total_seconds() > 0.5:
             self.__last_took_damage = datetime.datetime.now()
             self.hp -= amount
             self.__knockback_velocity = self.__dx * amount / 4
             self.__stunned = True
+        
     
 
     def collide(self, tile_data, player_data):
@@ -126,7 +166,7 @@ class Entity(Object):
         end_row = int((self.true_data[1] + self.true_data[3]) // tile_height + 1)
 
 
-        if (start_col or end_col or start_row or end_row) < 0: # tilemap only includes positive regions, so this would exit when looking at an invalid range
+        if start_col < 0 or end_col < 0 or start_row < 0 or end_row < 0: # tilemap only includes positive regions, so this would exit when looking at an invalid range
             return
 
         camera_pos = player_data[3] # standardised camera position variable
@@ -181,61 +221,77 @@ class Player(Object):
         self.__max_speed = max_speed
         self.__acceleration = 15
         self.velocity = pygame.Vector2(0, 0)
-        self.__type = -1.1
+        self.__asset_index = -1.1
         self.__time_of_last_attack = datetime.datetime.now()
         self.damage_data = None
+        self.__opacity = 255
     
     def display(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]: # Forward
             if abs(self.velocity.y) < abs(self.velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
-                self.__type = -1.1
+                self.__asset_index = -1.1
         if keys[pygame.K_a]: # Left
             if abs(self.velocity.x) < abs(self.velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
-                self.__type = -1.2
+                self.__asset_index = -1.2
         if keys[pygame.K_s]: # Down
             if abs(self.velocity.y) < abs(self.velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
-                self.__type = -1.3
+                self.__asset_index = -1.3
         if keys[pygame.K_d]: # Right
             if abs(self.velocity.x) < abs(self.velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
-                self.__type = -1.4
+                self.__asset_index = -1.4
         # Checks to see what keys are being held to determine which one is most recently pressed.
         # From this it determines what direction the player should be facing.
         # It also works so if you stop pressing anything the character still faces the same direction.
 
 
-        Object.display(self, self.screen, self.__type, self.visual_data)
+        Object.display(self, self.screen, self.__asset_index, self.visual_data, self.__opacity)
 
     def attack(self):
         #Holy laser beam
         if pygame.mouse.get_pressed()[0] and (datetime.datetime.now() - self.__time_of_last_attack).total_seconds() > 3: # Left mouse button, 3s cooldown
             self.__time_of_last_attack = datetime.datetime.now()
+            mouse_pos = pygame.mouse.get_pos()
+            angle = math.pi - math.atan2(self.screen.get_height()//2 - mouse_pos[1], self.screen.get_width()//2 - mouse_pos[0])
+            time = 0.2
+            damage = 30
+            asset_index = -3
+            object_data = pygame.rect.Rect(self.screen.get_width()//2, self.screen.get_height()//2, 24, 24)
+            return ["Holy_Ray", [object_data, time, damage, asset_index, angle]]
+
 
         #Mace
         elif pygame.mouse.get_pressed()[2] and (datetime.datetime.now() - self.__time_of_last_attack).total_seconds() > 0.7: # Right mouse button, 0.5s cooldown
             self.__time_of_last_attack = datetime.datetime.now()
             width = self.visual_data.width//2
             height = self.visual_data.height//2
+            time = 0.4
+            damage = 40
+            asset_index = -3
+            
            
-            match self.__type:
-                case -1.1:
-                    pos_x = self.visual_data.left - self.visual_data.width // 8
-                    pos_y = self.visual_data.top - self.visual_data.height // 4
+            match self.__asset_index:
+                case -1.1: # Up
 
-                    return [True, [pygame.rect.Rect(pos_x, pos_y, width, height), pygame.Vector2(pos_x + 2.25*width, pos_y), 0.4, 40, False]]
-                case -1.2:
-                    pos_x = self.visual_data.left - self.visual_data.width // 4
-                    pos_y = self.visual_data.bottom + self.visual_data.height // 8
-                    return [True, [pygame.rect.Rect(pos_x, pos_y, width, height), pygame.Vector2(pos_x, pos_y - 2.25*height), 0.4, 40, False]]
-                case -1.3:
-                    pos_x = self.visual_data.right + self.visual_data.width // 8
-                    pos_y = self.visual_data.bottom + self.visual_data.height // 4
-                    return [True, [pygame.rect.Rect(pos_x, pos_y, width, height), pygame.Vector2(pos_x - 2.25*width, pos_y), 0.4, 40, False]]
-                case -1.4:
-                    pos_x = self.visual_data.right + self.visual_data.width // 4
-                    pos_y = self.visual_data.top - self.visual_data.height // 8
-                    return [True, [pygame.rect.Rect(pos_x, pos_y, width, height), pygame.Vector2(pos_x, pos_y + 2.25*height), 0.4, 40, False]]
-        
+                    start_position_data = pygame.rect.Rect(self.visual_data.left - width, self.visual_data.top - height, width, height)
+                    destination = pygame.Vector2(self.visual_data.right, self.visual_data.top - height)
+
+                    return ["Mace", [start_position_data, time, damage, asset_index, destination]]
+                case -1.2: # Left
+                    start_position_data = pygame.rect.Rect(self.visual_data.left - width, self.visual_data.bottom, width, height)
+                    destination = pygame.Vector2(self.visual_data.left - width, self.visual_data.top - height)
+
+                    return ["Mace", [start_position_data, time, damage, asset_index, destination]]
+                case -1.3: # Down
+                    start_position_data = pygame.rect.Rect(self.visual_data.right, self.visual_data.bottom, width, height)
+                    destination = pygame.Vector2(self.visual_data.left - width, self.visual_data.bottom)
+
+                    return ["Mace", [start_position_data, time, damage, asset_index, destination]]
+                case -1.4: # Right
+                    start_position_data = pygame.rect.Rect(self.visual_data.right, self.visual_data.top - height, width, height)
+                    destination = pygame.Vector2(self.visual_data.right, self.visual_data.bottom)
+                    return ["Mace", [start_position_data, time, damage, asset_index, destination]]
+
         return [False]
 
 # 1280 x 800
