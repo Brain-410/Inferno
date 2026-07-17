@@ -1,4 +1,5 @@
 import pygame
+
 #Must use primitive datatypes (integers) for optimisation, so descriptions are placed as commas
 asset_library = { 
     3: pygame.Surface((1, 5)),
@@ -10,7 +11,8 @@ asset_library = {
     -1.3: pygame.Surface((48, 48)), #Character sprite: Down (s)
     -1.4: pygame.Surface((48, 48)), #Character sprite: Right (d)
     -2: pygame.Surface((16, 16)),
-    -3: pygame.Surface((24, 24))
+    -3: pygame.Surface((24, 24)),
+    -4: pygame.image.load("Backend\\Media\\Assets\\holy-ray.png")
 }
 
 

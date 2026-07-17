@@ -20,11 +20,11 @@ class Attack(Object):
         self.damage = damage
         self.time = time
         self.__asset_index = asset_index
-        self.__screen = screen
+        self.screen = screen
         self.__opacity = 255
 
     def display(self):
-        Object.display(self, self.__screen, self.__asset_index, self.rect_data, self.__opacity)
+        Object.display(self, self.screen, self.__asset_index, self.rect_data, self.__opacity)
     
 
 class Mace(Attack):
@@ -33,6 +33,7 @@ class Mace(Attack):
         self.__destination = pygame.Vector2(destination.x + self.rect_data.width//2, destination.y + self.rect_data.height//2)
         self.__speed = (self.rect_data.center - self.__destination).magnitude() / self.time
         self.__dx = (self.__destination - self.rect_data.center).normalize()
+        self.type = "Mace"
  
     def display(self):
         super().display()
@@ -43,13 +44,54 @@ class Mace(Attack):
         self.rect_data.center = self.position
 
 class Holy_Ray(Attack):
-    def __init__(self, screen, object_data, time, damage, asset_index, angle):
+    def __init__(self, screen, object_data, time, damage, asset_index, angle, max_length):
         super().__init__(screen, object_data, time, damage, asset_index)
         self.__angle = angle
+        print(self.__angle)
+        #self.__angle = 270
+        self.type = "Holy Ray"
+        self.__reference_image = asset_library.asset_library[asset_index]
+        self.__image = self.__reference_image
+        self.transformed_data = object_data
+
+        self.__direction = pygame.Vector2(math.cos(self.__angle * math.pi/180), -math.sin(self.__angle * math.pi/180))
+        self.__length = 0
+        self.__max_length = max_length
+        self.__extension_speed = self.__max_length / self.time
+        self.__time_of_start = datetime.datetime.now()
+
+        self.__start_position = pygame.Vector2(self.screen.get_width(), self.screen.get_height())//2
+
     def display(self):
-        super().display()
+        self.screen.blit(self.__image, (self.transformed_data.x, self.transformed_data.y))
+
     def extend(self):
-        pass
+        self.__length += self.__extension_speed * self.dt
+        self.__image = pygame.transform.scale(self.__reference_image, (self.__length, self.rect_data.width))
+        self.__image = pygame.transform.rotate(self.__image, self.__angle)
+        self.transformed_data = self.__image.get_rect()
+        print(f"offset: {0.5 * self.__length * self.__direction}")
+        self.transformed_data.center = self.__start_position + self.__length * self.__direction // 2
+
+    def end(self):
+        if self.__length >= self.__max_length:
+            self.__extension_speed = 0
+        if (datetime.datetime.now() - self.__time_of_start).total_seconds() > self.time + 0.5:
+            return True
+    
+    def do_damage(self, entities):
+        offset = pygame.Vector2(-self.__direction.y, self.__direction.x) * self.rect_data.width / 2
+        target = self.__start_position + self.__direction * self.__length
+
+        paths = [
+            (self.__start_position, target),
+            (self.__start_position + offset, target + offset),
+            (self.__start_position - offset, target - offset)
+        ]
+        for entity in entities:
+            for start, end in paths:
+                if entity.rect_data.clipline(start, end):
+                    entity.take_damage_laser(self.damage, 1)
 
 
 class Entity(Object):
@@ -67,18 +109,18 @@ class Entity(Object):
         self.__max_distance_squared = max_distance**2
         self.__detection_range_squared = detection_range**2
         self.__aggro = False
-        self.hp = hp
+        self.__hp = hp
         self.__last_took_damage = datetime.datetime.now()
         self.__dx = pygame.Vector2(0, 0)
         self.__opacity = 255
-        self.is_dead = False
+        self.delete = False
         self.__list = entity_list
 
     def display(self, screen):
-        if self.hp <= 0:
-            self.__opacity -= 1
+        if self.__hp <= 0:
+            self.__opacity -= 5
         if self.__opacity <= 0:
-            self.is_dead = True
+            self.delete = True
 
         Object.display(self, screen, -2, self.rect_data, self.__opacity)
 
@@ -100,14 +142,14 @@ class Entity(Object):
 
         if self.__aggro:
             if distance > self.__max_distance_squared:
-                if self.__stunned or self.hp <= 0:
+                if self.__stunned or self.__hp <= 0:
                     velocity_offset += self.__dx * self.__max_speed * self.dt
                 else:
                     self.position += self.__dx * self.__max_speed * self.dt
                     self.true_data[0] += self.__dx.x * self.__max_speed * self.dt
                     self.true_data[1] += self.__dx.y * self.__max_speed * self.dt
             else:
-                if self.__stunned or self.hp <= 0:
+                if self.__stunned or self.__hp <= 0:
                     velocity_offset += self.__dx * self.__max_speed / 2 * self.dt
                 else:
                     self.position -= self.__dx * self.__max_speed * 0.5 * self.dt
@@ -116,15 +158,15 @@ class Entity(Object):
 
 
         #player-entity collision
-        new_pos = pygame.rect.Rect(data[2].left + data[2].width//2 - self.rect_data.width//2, 
-                                   data[2].top + data[2].height//2 - self.rect_data.height//2, 
-                                   data[2].width, data[2].height)
-        while self.rect_data.colliderect(new_pos):
-            self.position -= self.__dx * 0.5
-            self.true_data[0] -= self.__dx.x * 0.5
-            self.true_data[1] -= self.__dx.y * 0.5
-            self.rect_data.center = self.position
-
+        if self.__hp > 0:
+            new_pos = pygame.rect.Rect(data[2].left + data[2].width//2 - self.rect_data.width//2, 
+                                    data[2].top + data[2].height//2 - self.rect_data.height//2, 
+                                    data[2].width, data[2].height)
+            while self.rect_data.colliderect(new_pos):
+                self.position -= self.__dx * 0.5
+                self.true_data[0] -= self.__dx.x * 0.5
+                self.true_data[1] -= self.__dx.y * 0.5
+                self.rect_data.center = self.position
 
         #attack knockback/stun
         self.position -= self.__knockback_velocity
@@ -141,16 +183,19 @@ class Entity(Object):
         self.rect_data.center = self.position
 
 
-
+    def take_damage_laser(self, amount, time_delay):
+        if (datetime.datetime.now() - self.__last_took_damage).total_seconds() > time_delay and self.__hp > 0:
+            self.__last_took_damage = datetime.datetime.now()
+            self.__hp -= amount
+            #self.__knockback_velocity = self.__dx * amount / 4
+            self.__stunned = True
 
     def take_damage(self, attack_data, amount):
-        #print(f"opacity: {self.__opacity}")
-        if self.rect_data.colliderect(attack_data) and (datetime.datetime.now() - self.__last_took_damage).total_seconds() > 0.5:
+        if self.rect_data.colliderect(attack_data) and (datetime.datetime.now() - self.__last_took_damage).total_seconds() > 0.5 and self.__hp > 0:
             self.__last_took_damage = datetime.datetime.now()
-            self.hp -= amount
+            self.__hp -= amount
             self.__knockback_velocity = self.__dx * amount / 4
             self.__stunned = True
-        
     
 
     def collide(self, tile_data, player_data):
@@ -249,15 +294,15 @@ class Player(Object):
 
     def attack(self):
         #Holy laser beam
-        if pygame.mouse.get_pressed()[0] and (datetime.datetime.now() - self.__time_of_last_attack).total_seconds() > 3: # Left mouse button, 3s cooldown
+        if pygame.mouse.get_pressed()[0] and (datetime.datetime.now() - self.__time_of_last_attack).total_seconds() > 1.5: # Left mouse button, 3s cooldown
             self.__time_of_last_attack = datetime.datetime.now()
             mouse_pos = pygame.mouse.get_pos()
-            angle = math.pi - math.atan2(self.screen.get_height()//2 - mouse_pos[1], self.screen.get_width()//2 - mouse_pos[0])
+            angle = math.degrees(math.atan2(self.screen.get_height()//2 - mouse_pos[1], mouse_pos[0] - self.screen.get_width()//2))
             time = 0.2
             damage = 30
-            asset_index = -3
+            asset_index = -4
             object_data = pygame.rect.Rect(self.screen.get_width()//2, self.screen.get_height()//2, 24, 24)
-            return ["Holy_Ray", [object_data, time, damage, asset_index, angle]]
+            return ["Holy_Ray", [object_data, time, damage, asset_index, angle, 480]]
 
 
         #Mace

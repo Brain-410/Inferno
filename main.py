@@ -1,4 +1,4 @@
-import pygame, Backend.connection as connection
+import pygame, Backend.connection as connection, Backend.Media.asset_library as asset_library
 
 running = True
 pygame.init()
@@ -11,6 +11,8 @@ while running == True:
         if event.type == pygame.QUIT:
             running = False
 
+    for asset in asset_library.asset_library.values():
+        asset.convert_alpha()
     connection.clear(screen)
     attributes = connection.player_data(screen, dt)
     connection.objects(screen, attributes)
@@ -23,4 +25,4 @@ while running == True:
 
 pygame.quit()
 
-#sssssssssss    aaaaadw
+#

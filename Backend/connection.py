@@ -18,15 +18,24 @@ file.close()
 character = None
 general_object = general.Object()
 entity_list = []
-entities_num = 0
 attack_objects = []
+collision_object_data = []
+
 
 def attacks(dt):
     for obj in attack_objects:
         obj.display()
         obj.dt = dt
-        if obj.move():
-            attack_objects.remove(obj)
+        match obj.type:
+            case "Mace":
+                if obj.move():
+                    attack_objects.remove(obj)
+            case "Holy Ray":
+                obj.extend()
+                obj.display()
+                obj.do_damage(entity_list)
+                if obj.end():
+                    attack_objects.remove(obj)
         
 
 def player_data(screen, dt):
@@ -38,7 +47,6 @@ def player_data(screen, dt):
     character.collide(data)
     attack_data = character.attack()
     if attack_data[0] == "Mace":
-        #print(*attack_data[1])
         attack_objects.append(general.Mace(screen, *attack_data[1]))
     elif attack_data[0] == "Holy_Ray":
         attack_objects.append(general.Holy_Ray(screen, *attack_data[1])) 
@@ -51,7 +59,7 @@ def player_render():
 
 def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with movement
     for entity in entity_list:
-        if entity.is_dead:
+        if entity.delete:
             entity_list.remove(entity)
     entities_num = len(entity_list)
     
@@ -63,7 +71,8 @@ def entities(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mo
         entity.move(player_attributes)
         entity.collide(data, player_attributes)
         for attack in attack_objects:
-            entity.take_damage(attack.rect_data, attack.damage)
+            if attack.type == "Mace":
+                entity.take_damage(attack.rect_data, attack.damage)
             
 
         #entity-entity collision
@@ -104,7 +113,6 @@ def summon_entity(player_true_data):
                 position_y = 820
         entity_list.append(general.Entity(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 1000, 50, player_true_data, entity_list))
         entity_list.sort(key=lambda x:  x.rect_data.left)
-    print(entity_list)
 
 def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movement
     camera_pos = player_attributes[3]
@@ -125,6 +133,7 @@ def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movemen
             obj_rect = pygame.rect.Rect(position_x, position_y, TILE_WIDTH, TILE_HEIGHT)
             
             general_object.display(screen, object_list[index], obj_rect, 255)
+
 
 def clear(screen):
     screen.fill("black")
