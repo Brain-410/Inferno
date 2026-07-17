@@ -17,12 +17,13 @@ while running == True:
     attributes = connection.player_data(screen, dt)
     connection.objects(screen, attributes)
     connection.attacks(dt)
-    connection.entities(screen, dt, attributes)
+    connection.enemies(screen, dt, attributes)
     connection.player_render()
-    connection.summon_entity(attributes)
+    connection.summon_enemy(attributes)
+    #connection.user_interface(screen)
 
     pygame.display.flip()
 
 pygame.quit()
 
-#
+#d
