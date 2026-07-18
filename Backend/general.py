@@ -81,6 +81,7 @@ class Holy_Ray(Attack):
     def do_damage(self, enemies):
         offset = pygame.Vector2(-self.__direction.y, self.__direction.x) * self.rect_data.width / 2
         target = self.__start_position + self.__direction * self.__length
+        take_damage = False
 
         paths = [
             (self.__start_position, target),
@@ -90,7 +91,11 @@ class Holy_Ray(Attack):
         for enemy in enemies:
             for start, end in paths:
                 if enemy.visual_data.clipline(start, end):
-                    enemy.take_damage_laser(self.damage, 1)
+                    take_damage = True
+            if take_damage:
+                enemy.take_damage_laser(self.damage)
+                take_damage = False
+            
 
 
 
@@ -136,12 +141,37 @@ class Enemy(Entity):
         self.__player = player
 
     def display(self, screen):
-        if self.hp <= 0:
+        self.hp = round(self.hp)
+        if self.hp < 1:
             self.__opacity -= 5
         if self.__opacity <= 0:
             self.delete = True
 
+
+        self.__outline_bar = pygame.surface.Surface((1, 1))
+        self.__outline_bar.fill((0, 0, 0))
+        self.__outline_bar_sprite = pygame.transform.scale(self.__outline_bar, (self.visual_data.width, 12))
+        self.__outline_bar_sprite.set_alpha(self.__opacity)
+
+        self.__backing_bar = pygame.surface.Surface((1, 1))
+        self.__backing_bar.fill((78, 29, 29))
+
+        self.__backing_bar_sprite = pygame.transform.scale(self.__backing_bar, (self.visual_data.width - 4, 8))
+        self.__backing_bar_sprite.set_alpha(self.__opacity)
+
+        bar_length = round(max(self.hp / self.max_hp * (self.visual_data.width - 4), 0))
+        self.__hp_sprite = pygame.surface.Surface((1, 1))
+        self.__hp_sprite.fill((255, 50, 50))
+        self.__hp_bar_sprite = pygame.transform.scale(self.__hp_sprite, (bar_length, 8))
+        self.__hp_bar_sprite.set_alpha(self.__opacity)
+
+
         super().display(screen, -2, self.visual_data, self.__opacity)
+
+        screen.blit(self.__outline_bar_sprite, (self.visual_data.left, self.visual_data.top - 5))
+        screen.blit(self.__backing_bar_sprite, (self.visual_data.left + 2, self.visual_data.top - 3))
+        screen.blit(self.__hp_bar_sprite, (self.visual_data.left + 2, self.visual_data.top - 3))
+
 
     def move(self, data):
 
@@ -206,10 +236,9 @@ class Enemy(Entity):
         self.visual_data.center = self.position
 
 
-    def take_damage_laser(self, amount, time_delay):
-        if (datetime.datetime.now() - self.last_took_damage).total_seconds() > time_delay and self.hp > 0:
-            self.last_took_damage = datetime.datetime.now()
-            self.hp -= amount
+    def take_damage_laser(self, amount):
+        self.hp -= amount * self.dt
+        print("TOOK")
 
 
     def take_damage(self, attack_data, amount):
@@ -242,7 +271,6 @@ class Enemy(Entity):
             for column in range(start_col, end_col):
 
                 index = (row * map_columns) + column
-                print(index, row, column)
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
                     object_rect = pygame.rect.Rect(column * tile_width - camera_pos.x, row * tile_height - camera_pos.y, tile_width, tile_height)
 
@@ -311,7 +339,7 @@ class Player(Entity):
         self.__velocity = pygame.Vector2(0, 0)
         self.__asset_index = -1.1
         self.damage_data = None
-        self.__opacity = 255
+        self.opacity = 255
 
     def gain_exp(self, amount):
         self.__exp += amount
@@ -351,7 +379,7 @@ class Player(Entity):
         # It also works so if you stop pressing anything the character still faces the same direction.
 
 
-        super().display(self.screen, self.__asset_index, self.visual_data, self.__opacity)
+        super().display(self.screen, self.__asset_index, self.visual_data, self.opacity)
 
     def restore(self):
         if self.__current_mana < self.__max_mana:
@@ -375,11 +403,6 @@ class Player(Entity):
         if (datetime.datetime.now() - self.last_took_damage).total_seconds() >= 0.7:
             self.hp -= amount
             self.__velocity = dx.normalize() * self.max_speed * 5
-            if self.hp < 0:
-                self.hp = 0
-                print("DED")
-
-
 
     def ability(self):
         #Holy laser beam 
@@ -403,7 +426,7 @@ class Player(Entity):
             width = self.visual_data.width//2
             height = self.visual_data.height//2
             time = 0.4
-            damage = 2 * self.damage
+            damage = self.damage
             asset_index = -3
             
            
@@ -484,7 +507,6 @@ class Player(Entity):
         start_row = int(self.__rect_data.top // tile_height - 1)
         end_row = int(self.__rect_data.bottom // tile_height)
 
-        print(start_col, end_col, start_row, end_row)
 
         self.__original_velocity = copy.copy(self.__velocity)
 
@@ -493,7 +515,6 @@ class Player(Entity):
             self.__rect_data.center = self.__true_center
             self.__camera_pos += self.__velocity
             return
-        print(start_row, end_row, start_col, end_col)
 
         #Checking all tiles the entity is touching
         for row in range(start_row, end_row):  
@@ -522,6 +543,11 @@ class Player(Entity):
         self.__camera_pos += self.__velocity
     
     def export_data(self):
+        if self.hp <= 0:
+            self.__velocity = pygame.Vector2(0, 0)
+            self.hp = 0
+            self.opacity -= 5
+        
         data = {
             "velocity": self.__velocity,
             "visual data": self.visual_data,
@@ -547,7 +573,8 @@ class UI:
         self.__screen = screen       
     def update_data(self, data):
 
-
+        self.__large_font = asset_library.fonts["large font"]
+        self.__small_font = asset_library.fonts["small font"]
         self.__bar_length = 128
 
         self.__backing_bar = pygame.surface.Surface((1, 1))
@@ -556,8 +583,8 @@ class UI:
 
         self.__hp_sprite = pygame.surface.Surface((1, 1))
         self.__hp_sprite.fill((255, 50, 50))
-        self.__player_hp = data["hp"]
-        self.__player_max_hp = data["max hp"]
+        self.__player_hp = int(data["hp"])
+        self.__player_max_hp = int(data["max hp"])
         self.__hp_bar_length = self.__player_hp / self.__player_max_hp * self.__bar_length
         self.__hp_backing_bar = pygame.surface.Surface((1, 1))
         self.__hp_backing_bar.fill((78, 29, 29))
@@ -565,8 +592,8 @@ class UI:
         
         self.__mana_sprite = pygame.surface.Surface((1, 1))
         self.__mana_sprite.fill((50, 50, 255))
-        self.__current_mana = data["current mana"]
-        self.__max_mana = data["max mana"]
+        self.__current_mana = int(data["current mana"])
+        self.__max_mana = int(data["max mana"])
         self.__mana_bar_length = self.__current_mana / self.__max_mana * self.__bar_length
         self.__mana_backing_bar = pygame.surface.Surface((1, 1))
         self.__mana_backing_bar.fill((29, 29, 78))
@@ -580,35 +607,51 @@ class UI:
         self.__exp_backing_bar = pygame.surface.Surface((1, 1))
         self.__exp_backing_bar.fill((29, 78, 29))
 
-        self.__player_level = data["level"]
+        self.__player_level = int(data["level"])
 
         self.__player_position = data["true data"] 
 
     def health_bar(self):
-        #print(f"HP: {self.__player_hp}/{self.__player_max_hp}")
-        self.__screen.blit(pygame.transform.scale(self.__hp_backing_bar, (self.__bar_length, 12)), (80, 40))
+        self.__screen.blit(pygame.transform.scale(self.__hp_backing_bar, (self.__bar_length, 18)), (80, 30))
         if self.__player_hp >= 0:
-            self.__screen.blit(pygame.transform.scale(self.__hp_sprite, (self.__hp_bar_length, 12)), (80, 40))
-        
+            self.__screen.blit(pygame.transform.scale(self.__hp_sprite, (self.__hp_bar_length, 18)), (80, 30))
+        text_surface = self.__small_font.render(f"{self.__player_hp} / {self.__player_max_hp}", True, (255, 255, 255))
+        text_rect = text_surface.get_rect()
+        text_rect.right = 75 + self.__bar_length
+        text_rect.centery = 41
+        self.__screen.blit(text_surface, text_rect)
     def mana_bar(self):
-        #print(f"Mana: {self.__current_mana}/{self.__max_mana}")
-        self.__screen.blit(pygame.transform.scale(self.__mana_backing_bar, (self.__bar_length, 12)), (90, 55))
+        self.__screen.blit(pygame.transform.scale(self.__mana_backing_bar, (self.__bar_length, 18)), (90, 55))
         if self.__current_mana >= 0:
-            self.__screen.blit(pygame.transform.scale(self.__mana_sprite, (self.__mana_bar_length, 12)), (90, 55))
-
+            self.__screen.blit(pygame.transform.scale(self.__mana_sprite, (self.__mana_bar_length, 18)), (90, 55))
+        text_surface = self.__small_font.render(f"{self.__current_mana} / {self.__max_mana}", True, (255, 255, 255))
+        text_rect = text_surface.get_rect()
+        text_rect.right = 85 + self.__bar_length
+        text_rect.centery = 66
+        self.__screen.blit(text_surface, text_rect)
     def exp_bar(self):
-        #print(f"EXP: {self.__player_exp}")
-        self.__screen.blit(pygame.transform.scale(self.__exp_backing_bar, (self.__bar_length, 12)), (80, 70))
-        self.__screen.blit(pygame.transform.scale(self.__exp_sprite, (self.__exp_bar_length, 12)), (80, 70))
+        self.__screen.blit(pygame.transform.scale(self.__exp_backing_bar, (self.__bar_length, 18)), (80, 80))
+        self.__screen.blit(pygame.transform.scale(self.__exp_sprite, (self.__exp_bar_length, 18)), (80, 80))
+        text_surface = self.__small_font.render(f"{self.__player_exp} / {self.__required_exp}", True, (255, 255, 255))
+        text_rect = text_surface.get_rect()
+        text_rect.right = 75 + self.__bar_length
+        text_rect.centery = 91
+        self.__screen.blit(text_surface, text_rect)
 
     def level(self):
-        #print(f"Level: {self.__player_level}")
-        pygame.draw.ellipse(self.__screen, (203, 149, 80), pygame.rect.Rect(30, 20, 60, 80))
-        pygame.draw.ellipse(self.__screen, (200, 200, 200), pygame.rect.Rect(35, 25, 50, 70))
+        pygame.draw.ellipse(self.__screen, (203, 149, 80), pygame.rect.Rect(25, 15, 70, 90))
+        center_ellipse_rect = pygame.rect.Rect(30, 20, 60, 80)
+        pygame.draw.ellipse(self.__screen, (200, 200, 200), center_ellipse_rect)
 
+        width = self.__large_font.size(str(self.__player_level))[0] - 3
+        height = self.__large_font.get_ascent()
+
+        text_x = center_ellipse_rect.left + (center_ellipse_rect.width - width)//2
+        text_y = center_ellipse_rect.top + (center_ellipse_rect.height - height)//2
+
+        self.__screen.blit(self.__large_font.render(f"{self.__player_level}", True, (255, 255, 255)), (text_x, text_y))
 
     def minimap(self):
         pass
-        #print(f"Position: {self.__player_position.center - pygame.Vector2(72, 72)}")
     def settings(self):
         pass

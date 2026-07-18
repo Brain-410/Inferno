@@ -1,5 +1,6 @@
 import pygame
 
+pygame.init()
 #Must use primitive datatypes (integers) for optimisation, so descriptions are placed as commas
 asset_library = { 
     3: pygame.Surface((1, 5)),
@@ -15,6 +16,9 @@ asset_library = {
     -4: pygame.image.load("Backend\\Media\\Assets\\holy-ray.png")
 }
 
+fonts = {
+    "large font": pygame.font.Font("Backend\\Media\\Assets\\Font.ttf", 48),
+    "small font": pygame.font.Font("Backend\\Media\\Assets\\Font.ttf", 16)}
 
 #temporary, will remove when proper assets are made
 asset_library[3].fill((0, 255, 255))

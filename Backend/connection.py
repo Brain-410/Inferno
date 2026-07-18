@@ -21,9 +21,12 @@ general_object = general.Object()
 enemy_list = []
 attack_objects = []
 collision_object_data = []
+run = False
 
 
 def attacks(dt):
+    if run == False:
+        return
     for obj in attack_objects:
         obj.display()
         obj.dt = dt
@@ -40,9 +43,20 @@ def attacks(dt):
         
 
 def player_data(screen, dt):
-    global character
+    global character, run
     if character == None:
         character = general.Player(2, pygame.rect.Rect(96, 96, 48, 48), screen, 100, 100, 15, 30, (TILE_WIDTH, TILE_HEIGHT), 5, 10, 0)
+        run = True
+    if character.opacity <= 0:
+        character = None
+        enemy_list.clear()
+        run = False
+        user_interface_object = None
+        
+        return
+    if character.hp <= 0:
+        return character.export_data()
+
     character.dt = dt
     character.move()
     character.collide(data)
@@ -54,12 +68,17 @@ def player_data(screen, dt):
     elif attack_data[0] == "Holy_Ray":
         attack_objects.append(general.Holy_Ray(screen, *attack_data[1])) 
     
+
     return character.export_data()
 
 def player_render():
+    if run == False:
+        return
     character.display()
 
 def enemies(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with movement
+    if run == False:
+        return
     for enemy in enemy_list:
         if enemy.delete:
             enemy_list.remove(enemy)
@@ -100,6 +119,8 @@ def enemies(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mov
 
 
 def summon_enemy(player_true_data):
+    if run == False:
+        return
     if random.randint(0, 99) == 1 and len(enemy_list) < MAX_ENEMIES:
         match random.randint(1, 4):
             case 1: # Top
@@ -114,10 +135,12 @@ def summon_enemy(player_true_data):
             case 4: # Bottom
                 position_x = random.randint(0, 1280)
                 position_y = 820
-        enemy_list.append(general.Enemy(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 1000, 50, 50, 30, player_true_data, enemy_list, 20, character))
+        enemy_list.append(general.Enemy(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 1000, 50, 50, 30, player_true_data, enemy_list, 5, character))
         enemy_list.sort(key=lambda x:  x.visual_data.left)
 
 def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movement
+    if run == False:
+        return
     camera_pos = player_attributes["camera position"]
 
     # Calculate which tiles are on the screen. Reduces lag, no need to render every tile
@@ -142,6 +165,8 @@ def clear(screen):
     screen.fill("black")
 
 def user_interface(screen, player_variables):
+    if run == False:
+        return
     global user_interface_object
     if user_interface_object == None:
         user_interface_object = general.UI(screen)
