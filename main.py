@@ -20,10 +20,10 @@ while running == True:
     connection.enemies(screen, dt, attributes)
     connection.player_render()
     connection.summon_enemy(attributes)
-    #connection.user_interface(screen)
+    connection.user_interface(screen, attributes)
 
     pygame.display.flip()
 
 pygame.quit()
 
-#d
+#

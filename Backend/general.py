@@ -116,7 +116,7 @@ class Entity(Object):
 
 
 class Enemy(Entity):
-    def __init__(self, data, max_speed, max_distance, detection_range, hp, max_hp, damage, player_data, enemy_list):
+    def __init__(self, data, max_speed, max_distance, detection_range, hp, max_hp, damage, player_data, enemy_list, reward_exp, player):
         super().__init__(data, max_speed, hp, max_hp, damage)
 
         self.position = self.visual_data.center
@@ -132,6 +132,8 @@ class Enemy(Entity):
         self.__opacity = 255
         self.delete = False
         self.__list = enemy_list
+        self.reward_exp = reward_exp
+        self.__player = player
 
     def display(self, screen):
         if self.hp <= 0:
@@ -179,6 +181,9 @@ class Enemy(Entity):
             new_pos = pygame.rect.Rect(data["visual data"].left + data["visual data"].width//2 - self.visual_data.width//2, 
                                     data["visual data"].top + data["visual data"].height//2 - self.visual_data.height//2, 
                                     data["visual data"].width, data["visual data"].height)
+            if self.visual_data.colliderect(new_pos) and (datetime.datetime.now() - self.time_of_last_attack).total_seconds() > 0.7:
+                self.time_of_last_attack = datetime.datetime.now()
+                self.__player.take_damage(self.damage, self.__dx)
             while self.visual_data.colliderect(new_pos):
                 self.position -= self.__dx * 0.5
 
@@ -197,7 +202,7 @@ class Enemy(Entity):
             self.__stunned = False
 
         #final update
-        self.velocity = self.position - self.frame_start_position + velocity_offset
+        self.__velocity = self.position - self.frame_start_position + velocity_offset
         self.visual_data.center = self.position
 
 
@@ -205,8 +210,7 @@ class Enemy(Entity):
         if (datetime.datetime.now() - self.last_took_damage).total_seconds() > time_delay and self.hp > 0:
             self.last_took_damage = datetime.datetime.now()
             self.hp -= amount
-            #self.__knockback_velocity = self.__dx * amount / 4
-            self.__stunned = True
+
 
     def take_damage(self, attack_data, amount):
         if self.visual_data.colliderect(attack_data) and (datetime.datetime.now() - self.last_took_damage).total_seconds() > 0.5 and self.hp > 0:
@@ -251,16 +255,16 @@ class Enemy(Entity):
 
                     if abs(dx) < abs(dy): # if the movement into the object is primarily vertical
                         while self.visual_data.colliderect(object_rect):
-                            self.position.x -= self.velocity.x
-                            self.true_data[0] -= self.velocity.x 
+                            self.position.x -= self.__velocity.x
+                            self.true_data[0] -= self.__velocity.x 
                             self.visual_data.center = self.position
                     else: # if the movement into the object is primarily horizontal
                         while self.visual_data.colliderect(object_rect):
-                            self.position.y -= self.velocity.y
-                            self.true_data[1] -= self.velocity.y
+                            self.position.y -= self.__velocity.y
+                            self.true_data[1] -= self.__velocity.y
                             self.visual_data.center = self.position
                     if (self.position - self.frame_start_position).magnitude_squared() > (self.max_speed + 1)**2: # prevents occasional clipping between corners
-                        offset = self.velocity
+                        offset = self.__velocity
                         self.position = self.frame_start_position + offset
                         self.true_data[0], self.true_data[1] = self.frame_start_position_true[0] + offset.x, self.frame_start_position_true[1] + offset.y
                     self.visual_data.center = self.position
@@ -274,40 +278,73 @@ class Enemy(Entity):
 #        self.last_took_damage = datetime.datetime.now(
 
 class Player(Entity):
-    def __init__(self, max_speed, data, screen, hp, max_hp, damage, tile_data):
-        
+    def __init__(self, max_speed, data, screen, hp, max_hp, hp_coefficient, damage, tile_data, mana_coefficient, base_mana, exp):
+
         super().__init__(pygame.rect.Rect((screen.get_width() - data.width)//2, (screen.get_height() - data.height)//2, data.width, data.height), max_speed, hp, max_hp, damage)
 
-        self.rect_data = data
-        self.rect_data.center += pygame.Vector2(tile_data[0] + data.width//2, tile_data[1] + data.height//2)
-        self.true_center = self.rect_data.center
+        self.__rect_data = data
+        self.__rect_data.center += pygame.Vector2(tile_data[0] + data.width//2, tile_data[1] + data.height//2)
+        self.__true_center = self.__rect_data.center
         self.screen = screen
-        
-        self.tile_width = tile_data[0]
-        self.tile_height = tile_data[1]
 
-        self.camera_pos = data.topleft - pygame.Vector2(self.screen.get_width() + data.width, self.screen.get_height() + data.height)//2
+        self.__camera_pos = data.topleft - pygame.Vector2(self.screen.get_width() + data.width, self.screen.get_height() + data.height)//2
 
+        self.__mana_coefficient = mana_coefficient
+        self.__hp_coefficient = hp_coefficient
+        self.__base_mana = base_mana
+        self.__exp = exp
+        self.__required_exp = 50
+        self.__level = self.__exp / 50 + 1
+        self.__max_mana = self.__base_mana + self.__mana_coefficient * self.__level
+        self.__current_mana = self.__max_mana
+        self.__mana_restore_speed = 0.6
+        self.__hp_restore_speed = 2
+
+        self.__laser_mana = 5
+        self.__heal_mana = 5
+
+        self.__time_of_heal = datetime.datetime.now()
+        self.__target_hp = self.max_hp
+        self.__healing = False
 
         self.__acceleration = 15
-        self.velocity = pygame.Vector2(0, 0)
+        self.__velocity = pygame.Vector2(0, 0)
         self.__asset_index = -1.1
         self.damage_data = None
         self.__opacity = 255
-    
+
+    def gain_exp(self, amount):
+        self.__exp += amount
+        while self.__exp >= self.__required_exp:
+            self.level_up()
+
+    def level_up(self):
+        self.__required_exp += 10
+        self.__exp = 0
+        self.__level += 1
+
+        self.damage += 5
+        self.__max_mana += self.__mana_coefficient
+        self.__current_mana += self.__mana_coefficient
+        self.max_hp += self.__hp_coefficient
+        self.hp += self.__hp_coefficient
+
+        self.__mana_restore_speed += 0.1
+        self.__hp_restore_speed += 0.1
+
     def display(self):
         keys = pygame.key.get_pressed()
         if keys[pygame.K_w]: # Forward
-            if abs(self.velocity.y) < abs(self.velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
+            if abs(self.__velocity.y) < abs(self.__velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
                 self.__asset_index = -1.1
         if keys[pygame.K_a]: # Left
-            if abs(self.velocity.x) < abs(self.velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
+            if abs(self.__velocity.x) < abs(self.__velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
                 self.__asset_index = -1.2
         if keys[pygame.K_s]: # Down
-            if abs(self.velocity.y) < abs(self.velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
+            if abs(self.__velocity.y) < abs(self.__velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
                 self.__asset_index = -1.3
         if keys[pygame.K_d]: # Right
-            if abs(self.velocity.x) < abs(self.velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
+            if abs(self.__velocity.x) < abs(self.__velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
                 self.__asset_index = -1.4
         # Checks to see what keys are being held to determine which one is most recently pressed.
         # From this it determines what direction the player should be facing.
@@ -316,10 +353,40 @@ class Player(Entity):
 
         super().display(self.screen, self.__asset_index, self.visual_data, self.__opacity)
 
-    def attack(self):
-        #Holy laser beam
-        if pygame.mouse.get_pressed()[0] and (datetime.datetime.now() - self.time_of_last_attack).total_seconds() > 1.5: # Left mouse button, 3s cooldown
+    def restore(self):
+        if self.__current_mana < self.__max_mana:
+            self.__current_mana += self.__mana_restore_speed * self.dt
+        if self.hp < self.max_hp:
+            self.hp += self.__hp_restore_speed * self.dt
+        
+        
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_TAB] and self.__current_mana >= 0 and (datetime.datetime.now() - self.__time_of_heal).total_seconds() > 3:
+            self.__time_of_heal = datetime.datetime.now()
+            self.__healing = True
+        if self.__healing:
+            self.hp += 2 * self.__heal_mana * self.dt
+            self.__current_mana -= self.__heal_mana * self.dt
+        if (self.hp >= self.max_hp or self.__current_mana <= 0) and self.__healing:
+            self.__current_mana = max(0, self.__current_mana)
+            self.__healing = False
+
+    def take_damage(self, amount, dx):
+        if (datetime.datetime.now() - self.last_took_damage).total_seconds() >= 0.7:
+            self.hp -= amount
+            self.__velocity = dx.normalize() * self.max_speed * 5
+            if self.hp < 0:
+                self.hp = 0
+                print("DED")
+
+
+
+    def ability(self):
+        #Holy laser beam 
+        if pygame.mouse.get_pressed()[0] and self.__current_mana >= self.__laser_mana and (datetime.datetime.now() - self.time_of_last_attack).total_seconds() > 1.5: # Left mouse button, 3s cooldown
+            self.__healing = False
             self.time_of_last_attack = datetime.datetime.now()
+            self.__current_mana -= self.__laser_mana
             mouse_pos = pygame.mouse.get_pos()
             angle = math.degrees(math.atan2(self.screen.get_height()//2 - mouse_pos[1], mouse_pos[0] - self.screen.get_width()//2))
             time = 0.2
@@ -331,6 +398,7 @@ class Player(Entity):
 
         #Mace
         elif pygame.mouse.get_pressed()[2] and (datetime.datetime.now() - self.time_of_last_attack).total_seconds() > 0.7: # Right mouse button, 0.5s cooldown
+            self.__healing = False
             self.time_of_last_attack = datetime.datetime.now()
             width = self.visual_data.width//2
             height = self.visual_data.height//2
@@ -370,34 +438,39 @@ class Player(Entity):
         keys = pygame.key.get_pressed()
         #horizontal motion
         if keys[pygame.K_a]:
-            self.velocity.x -= self.__acceleration * self.dt
-            if abs(self.velocity.x) >= self.max_speed:
-                self.velocity.x = self.velocity.x/abs(self.velocity.x) * self.max_speed
+            self.__healing = False
+            self.__velocity.x -= self.__acceleration * self.dt
+            if abs(self.__velocity.x) >= self.max_speed:
+                self.__velocity.x = self.__velocity.x/abs(self.__velocity.x) * self.max_speed
         if keys[pygame.K_d]:
-            self.velocity.x += self.__acceleration * self.dt
-            if abs(self.velocity.x) >= self.max_speed:
-                self.velocity.x = self.velocity.x/abs(self.velocity.x) * self.max_speed
+            self.__healing = False
+            self.__velocity.x += self.__acceleration * self.dt
+            if abs(self.__velocity.x) >= self.max_speed:
+                self.__velocity.x = self.__velocity.x/abs(self.__velocity.x) * self.max_speed
         if not(keys[pygame.K_a] or keys[pygame.K_d]):
-            if self.velocity.x <= 0.5 and self.velocity.x >= -0.5:
-                self.velocity.x = 0
+            if self.__velocity.x <= 0.5 and self.__velocity.x >= -0.5:
+                self.__velocity.x = 0
             else:
-                self.velocity.x *= 0.85
+                self.__velocity.x *= 0.85
         #vertical motion
         if keys[pygame.K_w]:
-            self.velocity.y -= self.__acceleration * self.dt
-            if abs(self.velocity.y) >= self.max_speed:
-                self.velocity.y = self.velocity.y/abs(self.velocity.y) * self.max_speed
+            self.__healing = False
+            self.__velocity.y -= self.__acceleration * self.dt
+            if abs(self.__velocity.y) >= self.max_speed:
+                self.__velocity.y = self.__velocity.y/abs(self.__velocity.y) * self.max_speed
         if keys[pygame.K_s]:
-            self.velocity.y += self.__acceleration * self.dt
-            if abs(self.velocity.y) >= self.max_speed:
-                self.velocity.y = self.velocity.y/abs(self.velocity.y) * self.max_speed
+            self.__healing = False
+            self.__velocity.y += self.__acceleration * self.dt
+            if abs(self.__velocity.y) >= self.max_speed:
+                self.__velocity.y = self.__velocity.y/abs(self.__velocity.y) * self.max_speed
         if not(keys[pygame.K_w] or keys[pygame.K_s]):
-            if self.velocity.y <= 0.5 and self.velocity.y >= -0.5:
-                self.velocity.y = 0
+            if self.__velocity.y <= 0.5 and self.__velocity.y >= -0.5:
+                self.__velocity.y = 0
             else:
-                self.velocity.y *= 0.85
+                self.__velocity.y *= 0.85
 
     def collide(self, tile_data):
+
 
         #entity-tilemap collision
         tile_width = tile_data["tilewidth"]
@@ -405,18 +478,18 @@ class Player(Entity):
         object_list = tile_data["layers"][0]["data"]
         map_columns = tile_data["width"]
 
-        start_col = int(self.rect_data.left // tile_width - 1)
-        end_col = int(self.rect_data.right // tile_width)
-        start_row = int(self.rect_data.top // tile_height - 1)
-        end_row = int(self.rect_data.bottom // tile_height)
+        start_col = int(self.__rect_data.left // tile_width - 1)
+        end_col = int(self.__rect_data.right // tile_width)
+        start_row = int(self.__rect_data.top // tile_height - 1)
+        end_row = int(self.__rect_data.bottom // tile_height)
 
-        self.original_velocity = copy.copy(self.velocity)
+        self.__original_velocity = copy.copy(self.__velocity)
         #Checking all tiles the entity is touching
         for row in range(start_row, end_row):  
             for column in range(start_col, end_col):
 
                 index = (row * map_columns) + column
-                object_rect = pygame.rect.Rect(column * tile_width - self.camera_pos.x, row * tile_height - self.camera_pos.y, tile_width, tile_height)
+                object_rect = pygame.rect.Rect(column * tile_width - self.__camera_pos.x, row * tile_height - self.__camera_pos.y, tile_width, tile_height)
 
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
                     # checking which direction it should be moved (and how much)
@@ -424,46 +497,107 @@ class Player(Entity):
                     dy = min(abs(self.visual_data.bottom - object_rect.top), abs(self.visual_data.top - object_rect.bottom))
                     if self.visual_data.colliderect(object_rect):
                         if dx < dy:
-                            if self.original_velocity.x > 0:
-                                self.velocity.x = -dx
+                            if self.__original_velocity.x > 0:
+                                self.__velocity.x = -dx
                             else:
-                                self.velocity.x = dx
+                                self.__velocity.x = dx
                         else:
-                            if self.original_velocity.y > 0:
-                                self.velocity.y = -dy
+                            if self.__original_velocity.y > 0:
+                                self.__velocity.y = -dy
                             else:
-                                self.velocity.y = dy
-        self.true_center += self.velocity
-        self.rect_data.center = self.true_center
-        self.camera_pos += self.velocity
+                                self.__velocity.y = dy
+        self.__true_center += self.__velocity
+        self.__rect_data.center = self.__true_center
+        self.__camera_pos += self.__velocity
     
     def export_data(self):
         data = {
-            "velocity": self.velocity,
+            "velocity": self.__velocity,
             "visual data": self.visual_data,
-            "true data": self.rect_data,
-            "camera position": self.camera_pos,
+            "true data": self.__rect_data,
+            "camera position": self.__camera_pos,
+
             "hp": self.hp,
-            #"mana": self.__mana,
-            #"exp": self.__exp
+            "max hp": self.max_hp,
+
+            "max mana": self.__max_mana,
+            "current mana": self.__current_mana,
+
+
+            "exp": self.__exp,
+            "required exp": self.__required_exp,
+            "level": self.__level
         }
         return data
 
 
 class UI:
-    def __init__(self, screen, player_variables):
+    def __init__(self, screen):
         self.__screen = screen       
-        self.__player_hp = player_variables["hp"]
-        self.__player_mana = player_variables["mana"]
-        self.__player_exp = player_variables["exp"]
-        self.__player_position = player_variables["true position"] 
+    def update_data(self, data):
+
+
+        self.__bar_length = 128
+
+        self.__backing_bar = pygame.surface.Surface((1, 1))
+        self.__backing_bar.fill((40, 40, 40))
+
+
+        self.__hp_sprite = pygame.surface.Surface((1, 1))
+        self.__hp_sprite.fill((255, 50, 50))
+        self.__player_hp = data["hp"]
+        self.__player_max_hp = data["max hp"]
+        self.__hp_bar_length = self.__player_hp / self.__player_max_hp * self.__bar_length
+        self.__hp_backing_bar = pygame.surface.Surface((1, 1))
+        self.__hp_backing_bar.fill((78, 29, 29))
+
+        
+        self.__mana_sprite = pygame.surface.Surface((1, 1))
+        self.__mana_sprite.fill((50, 50, 255))
+        self.__current_mana = data["current mana"]
+        self.__max_mana = data["max mana"]
+        self.__mana_bar_length = self.__current_mana / self.__max_mana * self.__bar_length
+        self.__mana_backing_bar = pygame.surface.Surface((1, 1))
+        self.__mana_backing_bar.fill((29, 29, 78))
+
+
+        self.__exp_sprite = pygame.surface.Surface((1, 1))
+        self.__exp_sprite.fill((50, 255, 50))
+        self.__player_exp = data["exp"]
+        self.__required_exp = data["required exp"]
+        self.__exp_bar_length = self.__player_exp / self.__required_exp * self.__bar_length
+        self.__exp_backing_bar = pygame.surface.Surface((1, 1))
+        self.__exp_backing_bar.fill((29, 78, 29))
+
+        self.__player_level = data["level"]
+
+        self.__player_position = data["true data"] 
+
     def health_bar(self):
-        print(self.__player_hp)
+        #print(f"HP: {self.__player_hp}/{self.__player_max_hp}")
+        self.__screen.blit(pygame.transform.scale(self.__hp_backing_bar, (self.__bar_length, 12)), (80, 40))
+        if self.__player_hp >= 0:
+            self.__screen.blit(pygame.transform.scale(self.__hp_sprite, (self.__hp_bar_length, 12)), (80, 40))
+        
     def mana_bar(self):
-        print(self.__player_mana)
+        #print(f"Mana: {self.__current_mana}/{self.__max_mana}")
+        self.__screen.blit(pygame.transform.scale(self.__mana_backing_bar, (self.__bar_length, 12)), (90, 55))
+        if self.__current_mana >= 0:
+            self.__screen.blit(pygame.transform.scale(self.__mana_sprite, (self.__mana_bar_length, 12)), (90, 55))
+
     def exp_bar(self):
-        print(self.__player_exp)
+        #print(f"EXP: {self.__player_exp}")
+        self.__screen.blit(pygame.transform.scale(self.__exp_backing_bar, (self.__bar_length, 12)), (80, 70))
+        self.__screen.blit(pygame.transform.scale(self.__exp_sprite, (self.__exp_bar_length, 12)), (80, 70))
+
+    def level(self):
+        #print(f"Level: {self.__player_level}")
+        pygame.draw.ellipse(self.__screen, (203, 149, 80), pygame.rect.Rect(30, 20, 60, 80))
+        pygame.draw.ellipse(self.__screen, (200, 200, 200), pygame.rect.Rect(35, 25, 50, 70))
+
+
     def minimap(self):
         pass
+        #print(f"Position: {self.__player_position.center - pygame.Vector2(72, 72)}")
     def settings(self):
         pass
