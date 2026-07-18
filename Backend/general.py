@@ -225,6 +225,7 @@ class Enemy(Entity):
         tile_width = tile_data["tilewidth"]
         tile_height = tile_data["tileheight"]
         object_list = tile_data["layers"][0]["data"]
+        map_rows = tile_data["height"]
         map_columns = tile_data["width"]
 
         start_col = int(self.true_data[0] // tile_width )
@@ -232,8 +233,7 @@ class Enemy(Entity):
         start_row = int(self.true_data[1] // tile_height)
         end_row = int((self.true_data[1] + self.true_data[3]) // tile_height + 1)
 
-
-        if start_col < 0 or end_col < 0 or start_row < 0 or end_row < 0: # tilemap only includes positive regions, so this would exit when looking at an invalid range
+        if start_row < 0 or end_row > map_rows or start_col < 0 or end_col > map_columns: # tilemap only includes positive regions, so this would exit when looking at an invalid range
             return
 
         camera_pos = player_data["camera position"] # standardised camera position variable
@@ -242,7 +242,7 @@ class Enemy(Entity):
             for column in range(start_col, end_col):
 
                 index = (row * map_columns) + column
-
+                print(index, row, column)
                 if object_list[index] in asset_library.collision_tiles: #If object is touching a collision tile
                     object_rect = pygame.rect.Rect(column * tile_width - camera_pos.x, row * tile_height - camera_pos.y, tile_width, tile_height)
 
@@ -477,13 +477,24 @@ class Player(Entity):
         tile_height = tile_data["tileheight"]
         object_list = tile_data["layers"][0]["data"]
         map_columns = tile_data["width"]
+        map_rows = tile_data["height"]
 
         start_col = int(self.__rect_data.left // tile_width - 1)
         end_col = int(self.__rect_data.right // tile_width)
         start_row = int(self.__rect_data.top // tile_height - 1)
         end_row = int(self.__rect_data.bottom // tile_height)
 
+        print(start_col, end_col, start_row, end_row)
+
         self.__original_velocity = copy.copy(self.__velocity)
+
+        if start_row < 0 or end_row > map_rows or start_col < 0 or end_col > map_columns:
+            self.__true_center += self.__velocity
+            self.__rect_data.center = self.__true_center
+            self.__camera_pos += self.__velocity
+            return
+        print(start_row, end_row, start_col, end_col)
+
         #Checking all tiles the entity is touching
         for row in range(start_row, end_row):  
             for column in range(start_col, end_col):
