@@ -238,8 +238,6 @@ class Enemy(Entity):
 
     def take_damage_laser(self, amount):
         self.hp -= amount * self.dt
-        print("TOOK")
-
 
     def take_damage(self, attack_data, amount):
         if self.visual_data.colliderect(attack_data) and (datetime.datetime.now() - self.last_took_damage).total_seconds() > 0.5 and self.hp > 0:
@@ -306,13 +304,15 @@ class Enemy(Entity):
 #        self.last_took_damage = datetime.datetime.now(
 
 class Player(Entity):
-    def __init__(self, max_speed, data, screen, hp, max_hp, hp_coefficient, damage, tile_data, mana_coefficient, base_mana, exp):
+    def __init__(self, max_speed, data, screen, hp_coefficient, damage, tile_data, mana_coefficient, base_mana, presets):
+        
 
-        super().__init__(pygame.rect.Rect((screen.get_width() - data.width)//2, (screen.get_height() - data.height)//2, data.width, data.height), max_speed, hp, max_hp, damage)
+        super().__init__(pygame.rect.Rect((screen.get_width() - data.width)//2, (screen.get_height() - data.height)//2, data.width, data.height), max_speed, presets[0], presets[1], damage)
 
         self.__rect_data = data
         self.__rect_data.center += pygame.Vector2(tile_data[0] + data.width//2, tile_data[1] + data.height//2)
         self.__true_center = self.__rect_data.center
+        self.__start_position = copy.copy(self.__rect_data.center)
         self.screen = screen
 
         self.__camera_pos = data.topleft - pygame.Vector2(self.screen.get_width() + data.width, self.screen.get_height() + data.height)//2
@@ -320,13 +320,15 @@ class Player(Entity):
         self.__mana_coefficient = mana_coefficient
         self.__hp_coefficient = hp_coefficient
         self.__base_mana = base_mana
-        self.__exp = exp
-        self.__required_exp = 50
-        self.__level = self.__exp / 50 + 1
-        self.__max_mana = self.__base_mana + self.__mana_coefficient * self.__level
-        self.__current_mana = self.__max_mana
-        self.__mana_restore_speed = 0.6
-        self.__hp_restore_speed = 2
+        self.__exp = presets[6]
+        self.__level = presets[7]
+        self.__required_exp = 50 +  self.__level * 10
+
+
+        self.__current_mana = presets[3]
+        self.__max_mana = presets[4]
+        self.__mana_restore_speed = presets[5]
+        self.__hp_restore_speed = presets[2]
 
         self.__laser_mana = 5
         self.__heal_mana = 5
@@ -340,6 +342,8 @@ class Player(Entity):
         self.__asset_index = -1.1
         self.damage_data = None
         self.opacity = 255
+
+        self.new_level = False
 
     def gain_exp(self, amount):
         self.__exp += amount
@@ -538,15 +542,20 @@ class Player(Entity):
                                 self.__velocity.y = -dy
                             else:
                                 self.__velocity.y = dy
+                if object_list[index] in asset_library.new_level:
+                    self.new_level = True
         self.__true_center += self.__velocity
         self.__rect_data.center = self.__true_center
         self.__camera_pos += self.__velocity
+
+    def change_level(self):
+        self.__rect_data.center = self.__start_position
+        self.__velocity = pygame.Vector2(0, 0)
+        self.new_level = False
+
+        return [self.hp, self.max_hp, self.__hp_restore_speed, self.__current_mana, self.__max_mana, self.__mana_restore_speed, self.__exp, self.__level]
     
     def export_data(self):
-        if self.hp <= 0:
-            self.__velocity = pygame.Vector2(0, 0)
-            self.hp = 0
-            self.opacity -= 5
         
         data = {
             "velocity": self.__velocity,
@@ -563,7 +572,9 @@ class Player(Entity):
 
             "exp": self.__exp,
             "required exp": self.__required_exp,
-            "level": self.__level
+            "level": self.__level,
+
+            "new level": self.new_level
         }
         return data
 

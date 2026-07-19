@@ -10,15 +10,16 @@ while running == True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+    connection.clear(screen)
 
     for asset in asset_library.asset_library.values():
         asset.convert_alpha()
-    connection.clear(screen)
+    connection.run_screen(screen)
     attributes = connection.player_data(screen, dt)
     connection.objects(screen, attributes)
     connection.attacks(dt)
     connection.enemies(screen, dt, attributes)
-    connection.player_render()
+    connection.player_render(attributes)
     connection.summon_enemy(attributes)
     connection.user_interface(screen, attributes)
 

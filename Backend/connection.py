@@ -1,7 +1,5 @@
-import pygame
-import Backend.general as general
-import json
-import random, datetime
+import pygame, copy, random, json
+import Backend.general as general, Backend.screens as screens
 
 MAX_ENEMIES = 5
 
@@ -14,6 +12,18 @@ with open("Backend\\Media\\test.json", "r") as file:
     map_col = data["width"]
 file.close()
 
+levels = {
+    1: "Limbo",
+    2: "Lust",
+    3: "Gluttony",
+    4: "Greed",
+    5: "Wrath",
+    6: "Heresy",
+    7: "Violence",
+    8: "Fraud",
+    9: "Treachery"
+}
+
 
 character = None
 user_interface_object = None
@@ -22,10 +32,49 @@ enemy_list = []
 attack_objects = []
 collision_object_data = []
 run = False
+level = 1
+title_screen = None
+connecting_screen = None
+death_screen = None
+victory_screen = None
+
+character_info_base = [100, 100, 2, 15, 15, 0.6, 0, 1]
+character_info = [100, 100, 2, 15, 15, 0.6, 0, 1]
+
+current_screen = "Title"
+
+def run_screen(screen):
+    global title_screen, connecting_screen, current_screen, death_screen, victory_screen
+    match current_screen:
+        case "Title":
+            if title_screen == None:
+                title_screen = screens.Title_Screen(screen, 255, 9)
+            title_screen.display()
+            title_screen.buttons()
+            if title_screen.fade():
+                current_screen = "Connecting"
+                title_screen = None
+        case "Connecting":
+            if connecting_screen == None:
+                connecting_screen = screens.Connector_Screen(screen, 0, 9, level, levels[level])
+            connecting_screen.display()
+            if connecting_screen.fade():
+                current_screen = "Play"
+                connecting_screen = None
+        case "Death":
+            if death_screen == None:
+                death_screen = screens.Death_Screen(screen, 0, 9)
+            death_screen.display()
+            if death_screen.fade():
+                current_screen = "Title"
+                death_screen = None
+        case "Victory":
+            pass
 
 
 def attacks(dt):
-    if run == False:
+    global current_screen
+    if current_screen != "Play":
         return
     for obj in attack_objects:
         obj.display()
@@ -43,19 +92,26 @@ def attacks(dt):
         
 
 def player_data(screen, dt):
-    global character, run
+    global character, run, current_screen, character_info, level, enemy_list
+    if current_screen != "Play":
+        return
     if character == None:
-        character = general.Player(2, pygame.rect.Rect(96, 96, 48, 48), screen, 100, 100, 15, 30, (TILE_WIDTH, TILE_HEIGHT), 5, 10, 0)
-        run = True
+        character = general.Player(2, pygame.rect.Rect(96, 96, 48, 48), screen, 15, 30, (TILE_WIDTH, TILE_HEIGHT), 5, 10, character_info)
     if character.opacity <= 0:
         character = None
         enemy_list.clear()
-        run = False
-        user_interface_object = None
-        
+        current_screen = "Title"
+        character_info = None        
         return
     if character.hp <= 0:
-        return character.export_data()
+        enemy_list.clear()
+        character = None
+        character_info = copy.copy(character_info_base)
+        level = 1
+        current_screen = "Death"
+        return
+
+ 
 
     character.dt = dt
     character.move()
@@ -68,16 +124,30 @@ def player_data(screen, dt):
     elif attack_data[0] == "Holy_Ray":
         attack_objects.append(general.Holy_Ray(screen, *attack_data[1])) 
     
+    if character.new_level:
+        character_info = character.change_level()
+        character = None
+        level += 1
+        if level == 10:
+            current_screen = "Victory"
+        current_screen = "Connecting"
+        enemy_list.clear()
+        return
+    
+
 
     return character.export_data()
 
-def player_render():
-    if run == False:
+def player_render(player_data):
+    global current_screen, level, enemy_list
+
+    if current_screen != "Play":
         return
     character.display()
 
 def enemies(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with movement
-    if run == False:
+    global current_screen
+    if current_screen != "Play":
         return
     for enemy in enemy_list:
         if enemy.delete:
@@ -119,7 +189,8 @@ def enemies(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mov
 
 
 def summon_enemy(player_true_data):
-    if run == False:
+    global current_screen
+    if current_screen != "Play":
         return
     if random.randint(0, 99) == 1 and len(enemy_list) < MAX_ENEMIES:
         match random.randint(1, 4):
@@ -139,7 +210,8 @@ def summon_enemy(player_true_data):
         enemy_list.sort(key=lambda x:  x.visual_data.left)
 
 def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movement
-    if run == False:
+    global current_screen
+    if current_screen != "Play":
         return
     camera_pos = player_attributes["camera position"]
 
@@ -164,8 +236,10 @@ def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movemen
 def clear(screen):
     screen.fill("black")
 
+
 def user_interface(screen, player_variables):
-    if run == False:
+    global current_screen
+    if current_screen != "Play":
         return
     global user_interface_object
     if user_interface_object == None:
