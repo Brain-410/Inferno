@@ -1,0 +1,25 @@
+{
+    "activeFile": "",
+    "expandedProjectPaths": [
+    ],
+    "fileStates": {
+        "Tileset Limbo.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 2
+        }
+    },
+    "last.imagePath": "C:/Users/baidy/Downloads",
+    "map.height": 100,
+    "map.width": 100,
+    "openFiles": [
+    ],
+    "project": "Tilemap 1.tiled-project",
+    "recentFiles": [
+        "Tileset Limbo.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.tileSize": {
+        "height": 30,
+        "width": 30
+    }
+}

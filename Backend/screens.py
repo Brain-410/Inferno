@@ -127,7 +127,7 @@ class Death_Screen(Screen):
         if self.opacity >= 255:
             self.opacity = 255
             self.__faded = True
-        if self.__faded and (datetime.datetime.now() - self.fade_start).total_seconds() > 1:   
+        if pygame.mouse.get_pressed():
             self.fade_speed *= -1
             self.__faded = False
         

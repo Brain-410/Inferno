@@ -11,6 +11,15 @@ class Object:
     def move(variable, velocity: pygame.Vector2):
         variable -= velocity
 
+class Tile:
+    def display(self, screen, asset_index, data, opacity):
+        image = asset_library.tile_assets[asset_index]
+        image.set_alpha(opacity)
+        screen.blit(pygame.transform.scale(image, (data.width, data.height)), tuple(data.topleft))
+    def move(variable, velocity: pygame.Vector2):
+        variable -= velocity
+
+
 class Attack(Object):
     def __init__(self, screen, object_data, time: float, damage: int, asset_index):
         self.dt = 0.016
@@ -131,7 +140,7 @@ class Enemy(Entity):
         self.__knockback_velocity = pygame.Vector2(0, 0)
         self.__stunned = False
         self.__max_distance_squared = max_distance**2
-        self.__detection_range_squared = detection_range**2
+        self.detection_range_squared = detection_range**2
         self.__aggro = False
         self.__dx = pygame.Vector2(0, 0)
         self.__opacity = 255
@@ -184,9 +193,14 @@ class Enemy(Entity):
         distance = (pygame.Vector2(640, 400) - self.visual_data.center).magnitude_squared()
         self.__dx = (pygame.Vector2(640, 400) - self.visual_data.center).normalize()
 
-        if distance > 2.25 * self.__detection_range_squared: 
+        if distance > 800000:
+            self.delete = True
+            self.reward_exp = 0
+
+        if distance > 2.25 * self.detection_range_squared: 
             self.__aggro = False
-        elif distance < self.__detection_range_squared:
+            
+        elif distance < self.detection_range_squared:
             self.__aggro = True
 
         if self.__aggro:
@@ -309,6 +323,8 @@ class Player(Entity):
 
         super().__init__(pygame.rect.Rect((screen.get_width() - data.width)//2, (screen.get_height() - data.height)//2, data.width, data.height), max_speed, presets[0], presets[1], damage)
 
+
+
         self.__rect_data = data
         self.__rect_data.center += pygame.Vector2(tile_data[0] + data.width//2, tile_data[1] + data.height//2)
         self.__true_center = self.__rect_data.center
@@ -342,6 +358,7 @@ class Player(Entity):
         self.__asset_index = -1.1
         self.damage_data = None
         self.opacity = 255
+        self.alert = False
 
         self.new_level = False
 
@@ -372,16 +389,18 @@ class Player(Entity):
         if keys[pygame.K_a]: # Left
             if abs(self.__velocity.x) < abs(self.__velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
                 self.__asset_index = -1.2
+
         if keys[pygame.K_s]: # Down
             if abs(self.__velocity.y) < abs(self.__velocity.x) or not(keys[pygame.K_a] or keys[pygame.K_d]):
                 self.__asset_index = -1.3
+
         if keys[pygame.K_d]: # Right
             if abs(self.__velocity.x) < abs(self.__velocity.y) or not(keys[pygame.K_w] or keys[pygame.K_s]):
                 self.__asset_index = -1.4
+                
         # Checks to see what keys are being held to determine which one is most recently pressed.
         # From this it determines what direction the player should be facing.
         # It also works so if you stop pressing anything the character still faces the same direction.
-
 
         super().display(self.screen, self.__asset_index, self.visual_data, self.opacity)
 
@@ -409,8 +428,11 @@ class Player(Entity):
             self.__velocity = dx.normalize() * self.max_speed * 5
 
     def ability(self):
+        time_difference = (datetime.datetime.now() - self.time_of_last_attack).total_seconds()
+        if time_difference > 5:
+            self.alert = False
         #Holy laser beam 
-        if pygame.mouse.get_pressed()[0] and self.__current_mana >= self.__laser_mana and (datetime.datetime.now() - self.time_of_last_attack).total_seconds() > 1.5: # Left mouse button, 3s cooldown
+        if pygame.mouse.get_pressed()[0] and self.__current_mana >= self.__laser_mana and time_difference > 1.5: # Left mouse button, 3s cooldown
             self.__healing = False
             self.time_of_last_attack = datetime.datetime.now()
             self.__current_mana -= self.__laser_mana
@@ -420,11 +442,12 @@ class Player(Entity):
             damage = self.damage
             asset_index = -4
             object_data = pygame.rect.Rect(self.screen.get_width()//2, self.screen.get_height()//2, 24, 24)
+            self.alert = True
             return ["Holy_Ray", [object_data, time, damage, asset_index, angle, 480]]
 
 
         #Mace
-        elif pygame.mouse.get_pressed()[2] and (datetime.datetime.now() - self.time_of_last_attack).total_seconds() > 0.7: # Right mouse button, 0.5s cooldown
+        elif pygame.mouse.get_pressed()[2] and time_difference > 0.7: # Right mouse button, 0.5s cooldown
             self.__healing = False
             self.time_of_last_attack = datetime.datetime.now()
             width = self.visual_data.width//2
@@ -432,6 +455,7 @@ class Player(Entity):
             time = 0.4
             damage = self.damage
             asset_index = -3
+            self.alert = True
             
            
             match self.__asset_index:
@@ -574,7 +598,9 @@ class Player(Entity):
             "required exp": self.__required_exp,
             "level": self.__level,
 
-            "new level": self.new_level
+            "new level": self.new_level,
+
+            "alert": self.alert
         }
         return data
 
