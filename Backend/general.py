@@ -15,7 +15,7 @@ class Tile:
     def display(self, screen, asset_index, data, opacity):
         image = asset_library.tile_assets[asset_index]
         image.set_alpha(opacity)
-        screen.blit(pygame.transform.scale(image, (data.width, data.height)), tuple(data.topleft))
+        screen.blit(image, tuple(data.topleft))
     def move(variable, velocity: pygame.Vector2):
         variable -= velocity
 
@@ -234,10 +234,10 @@ class Enemy(Entity):
                 self.time_of_last_attack = datetime.datetime.now()
                 self.__player.take_damage(self.damage, self.__dx)
             while self.visual_data.colliderect(new_pos):
-                self.position -= self.__dx * 0.5
+                self.position -= self.__dx
 
-                self.true_data[0] -= self.__dx.x * 0.5
-                self.true_data[1] -= self.__dx.y * 0.5
+                self.true_data[0] -= self.__dx.x
+                self.true_data[1] -= self.__dx.y
                 self.visual_data.center = self.position
 
         #attack knockback/stun

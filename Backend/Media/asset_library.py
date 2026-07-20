@@ -21,6 +21,7 @@ tile_assets = {}
 
 for i in range(1, 99):
     tile_assets[i] = pygame.image.load(f"Backend\\Media\\Assets\\Tileset\\Tile_{i:02d}.png")
+    tile_assets[i] = pygame.transform.scale(tile_assets[i], (48, 48))
 
 fonts = {
     "title_screen font": pygame.font.Font("Backend\\Media\\Assets\\Font.ttf", 96),

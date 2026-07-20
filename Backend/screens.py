@@ -123,7 +123,38 @@ class Death_Screen(Screen):
 
     
     def fade(self):
+        if self.opacity >= 255:
+            self.opacity = 255
+            self.__faded = True
+        if pygame.mouse.get_pressed():
+            self.fade_speed *= -1
+            self.__faded = False
+            print("HO")
+        
+        super().fade(-self.fade_speed)
         print(self.opacity)
+        if self.opacity < 0:
+            return True
+
+class Death_Screen(Screen):
+    def __init__(self, screen, opacity, fade_speed):
+        super().__init__(screen, opacity, fade_speed)
+        self.__faded = False
+        self.fade_start = datetime.datetime.now()
+        self.__text = asset_library.fonts["title_screen font"]
+
+        self.width = self.__text.size("Congratulations")[0] - 3
+        self.height = self.__text.get_ascent()
+        self.__text_surface = self.__text.render("Congratulations", True, "grey90")
+        self.__text_rect = self.__text_surface.get_rect()
+        self.__text_rect.topleft = pygame.Vector2(self.screen.get_width() - self.width, self.screen.get_height() - self.height - 250) // 2
+
+
+    def display(self):
+        super().display(self.__text_surface, self.__text_rect)
+
+    
+    def fade(self):
         if self.opacity >= 255:
             self.opacity = 255
             self.__faded = True

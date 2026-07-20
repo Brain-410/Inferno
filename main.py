@@ -16,6 +16,7 @@ while running == True:
         asset.convert_alpha()
     for asset in asset_library.tile_assets.values():
         asset.convert_alpha()
+        
     connection.run_screen(screen)
     attributes = connection.player_data(screen, dt)
     connection.objects(screen, attributes)

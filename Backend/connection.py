@@ -19,7 +19,7 @@ levels = {
 }
 
 for level in [1]:
-    with open(f"Backend\\Media\\level{level}.json", "r") as file:
+    with open(f"Backend\\Media\\Level_Data\\level{level}.json", "r") as file:
         level_data[level-1]["data"] = json.load(file)
         level_data[level-1]["object_list"] =  level_data[level-1]["data"]["layers"][0]["data"]
         level_data[level-1]["TILE_WIDTH"] =  level_data[level-1]["data"]["tilewidth"]
@@ -73,7 +73,12 @@ def run_screen(screen):
                 current_screen = "Title"
                 death_screen = None
         case "Victory":
-            pass
+            if victory_screen == None:
+                victory_screen = screens.Death_Screen(screen, 0, 9)
+            death_screen.display()
+            if death_screen.fade():
+                current_screen = "Title"
+                death_screen = None
 
 
 def attacks(dt):
