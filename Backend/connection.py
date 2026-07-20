@@ -28,8 +28,6 @@ for level in [1]:
         level_data[level-1]["map_col"] =  level_data[level-1]["data"]["width"]
     file.close()
 
-    print(level_data)
-
 character = None
 user_interface_object = None
 general_object = general.Tile()

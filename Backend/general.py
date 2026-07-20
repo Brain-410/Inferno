@@ -148,6 +148,7 @@ class Enemy(Entity):
         self.__list = enemy_list
         self.reward_exp = reward_exp
         self.__player = player
+        self.__type = -2.1
 
     def display(self, screen):
         self.hp = round(self.hp)
@@ -175,7 +176,7 @@ class Enemy(Entity):
         self.__hp_bar_sprite.set_alpha(self.__opacity)
 
 
-        super().display(screen, -2, self.visual_data, self.__opacity)
+        super().display(screen, self.__type, self.visual_data, self.__opacity)
 
         screen.blit(self.__outline_bar_sprite, (self.visual_data.left, self.visual_data.top - 5))
         screen.blit(self.__backing_bar_sprite, (self.visual_data.left + 2, self.visual_data.top - 3))
@@ -192,6 +193,10 @@ class Enemy(Entity):
         # Player targeting movement
         distance = (pygame.Vector2(640, 400) - self.visual_data.center).magnitude_squared()
         self.__dx = (pygame.Vector2(640, 400) - self.visual_data.center).normalize()
+        if self.__dx.x > 0:
+            self.__type = -2.1
+        else:
+            self.__type = -2.2
 
         if distance > 800000:
             self.delete = True
