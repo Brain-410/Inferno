@@ -14,7 +14,6 @@ class Object:
 class Tile:
     def display(self, screen, asset_index, data, opacity):
         image = asset_library.tile_assets[asset_index]
-        image.set_alpha(opacity)
         screen.blit(image, tuple(data.topleft))
     def move(variable, velocity: pygame.Vector2):
         variable -= velocity
@@ -191,8 +190,8 @@ class Enemy(Entity):
         velocity_offset = pygame.Vector2(0, 0)
 
         # Player targeting movement
-        distance = (pygame.Vector2(640, 400) - self.visual_data.center).magnitude_squared()
-        self.__dx = (pygame.Vector2(640, 400) - self.visual_data.center).normalize()
+        distance = (pygame.Vector2(360, 270) - self.visual_data.center).magnitude_squared()
+        self.__dx = (pygame.Vector2(360, 270) - self.visual_data.center).normalize()
         if self.__dx.x > 0:
             self.__type = -2.1
         else:
@@ -654,35 +653,35 @@ class UI:
         self.__player_position = data["true data"] 
 
     def health_bar(self):
-        self.__screen.blit(pygame.transform.scale(self.__hp_backing_bar, (self.__bar_length, 18)), (80, 30))
+        self.__screen.blit(pygame.transform.scale(self.__hp_backing_bar, (self.__bar_length, 18)), (70, 20))
         if self.__player_hp >= 0:
-            self.__screen.blit(pygame.transform.scale(self.__hp_sprite, (self.__hp_bar_length, 18)), (80, 30))
+            self.__screen.blit(pygame.transform.scale(self.__hp_sprite, (self.__hp_bar_length, 18)), (70, 20))
         text_surface = self.__small_font.render(f"{self.__player_hp} / {self.__player_max_hp}", True, (255, 255, 255))
         text_rect = text_surface.get_rect()
-        text_rect.right = 75 + self.__bar_length
-        text_rect.centery = 41
+        text_rect.right = 65 + self.__bar_length
+        text_rect.centery = 31
         self.__screen.blit(text_surface, text_rect)
     def mana_bar(self):
-        self.__screen.blit(pygame.transform.scale(self.__mana_backing_bar, (self.__bar_length, 18)), (90, 55))
+        self.__screen.blit(pygame.transform.scale(self.__mana_backing_bar, (self.__bar_length, 18)), (80, 45))
         if self.__current_mana >= 0:
-            self.__screen.blit(pygame.transform.scale(self.__mana_sprite, (self.__mana_bar_length, 18)), (90, 55))
+            self.__screen.blit(pygame.transform.scale(self.__mana_sprite, (self.__mana_bar_length, 18)), (80, 45))
         text_surface = self.__small_font.render(f"{self.__current_mana} / {self.__max_mana}", True, (255, 255, 255))
         text_rect = text_surface.get_rect()
-        text_rect.right = 85 + self.__bar_length
-        text_rect.centery = 66
+        text_rect.right = 75 + self.__bar_length
+        text_rect.centery = 56
         self.__screen.blit(text_surface, text_rect)
     def exp_bar(self):
-        self.__screen.blit(pygame.transform.scale(self.__exp_backing_bar, (self.__bar_length, 18)), (80, 80))
-        self.__screen.blit(pygame.transform.scale(self.__exp_sprite, (self.__exp_bar_length, 18)), (80, 80))
+        self.__screen.blit(pygame.transform.scale(self.__exp_backing_bar, (self.__bar_length, 18)), (70, 70))
+        self.__screen.blit(pygame.transform.scale(self.__exp_sprite, (self.__exp_bar_length, 18)), (70, 70))
         text_surface = self.__small_font.render(f"{self.__player_exp} / {self.__required_exp}", True, (255, 255, 255))
         text_rect = text_surface.get_rect()
-        text_rect.right = 75 + self.__bar_length
-        text_rect.centery = 91
+        text_rect.right = 65 + self.__bar_length
+        text_rect.centery = 81
         self.__screen.blit(text_surface, text_rect)
 
     def level(self):
-        pygame.draw.ellipse(self.__screen, (203, 149, 80), pygame.rect.Rect(25, 15, 70, 90))
-        center_ellipse_rect = pygame.rect.Rect(30, 20, 60, 80)
+        pygame.draw.ellipse(self.__screen, (203, 149, 80), pygame.rect.Rect(15, 5, 70, 90))
+        center_ellipse_rect = pygame.rect.Rect(20, 10, 60, 80)
         pygame.draw.ellipse(self.__screen, (200, 200, 200), center_ellipse_rect)
 
         width = self.__large_font.size(str(self.__player_level))[0] - 3

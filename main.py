@@ -2,8 +2,12 @@ import pygame, Backend.connection as connection, Backend.Media.asset_library as 
 
 running = True
 pygame.init()
-screen = pygame.display.set_mode((0, 0))
+screen = pygame.display.set_mode((720, 448))
 clock = pygame.time.Clock()
+for asset in asset_library.asset_library.values():
+    asset = asset.convert_alpha()
+for asset in asset_library.tile_assets.values():
+    asset = asset.convert()
 
 while running == True:
     dt = clock.tick (60)/1000
@@ -12,10 +16,8 @@ while running == True:
             running = False
     connection.clear(screen)
 
-    for asset in asset_library.asset_library.values():
-        asset.convert_alpha()
-    for asset in asset_library.tile_assets.values():
-        asset.convert_alpha()
+
+
         
     connection.run_screen(screen)
     attributes = connection.player_data(screen, dt)

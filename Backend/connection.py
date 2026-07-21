@@ -8,17 +8,12 @@ level_data = [{}, {}, {}, {}, {}, {}, {}, {}, {}]
 
 levels = {
     1: "Limbo",
-    2: "Lust",
-    3: "Gluttony",
-    4: "Greed",
-    5: "Wrath",
-    6: "Heresy",
-    7: "Violence",
-    8: "Fraud",
-    9: "Treachery"
+    2: "Greed",
+    3: "Wrath",
+    4: "Treachery"
 }
 
-for level in [1]:
+for level in levels:
     with open(f"Backend\\Media\\Level_Data\\level{level}.json", "r") as file:
         level_data[level-1]["data"] = json.load(file)
         level_data[level-1]["object_list"] =  level_data[level-1]["data"]["layers"][0]["data"]
@@ -74,11 +69,11 @@ def run_screen(screen):
                 death_screen = None
         case "Victory":
             if victory_screen == None:
-                victory_screen = screens.Death_Screen(screen, 0, 9)
-            death_screen.display()
-            if death_screen.fade():
+                victory_screen = screens.Victory_Screen(screen, 0, 9)
+            victory_screen.display()
+            if victory_screen.fade() == True:
                 current_screen = "Title"
-                death_screen = None
+                victory_screen = None
 
 
 def attacks(dt):
@@ -105,7 +100,7 @@ def player_data(screen, dt):
     if current_screen != "Play":
         return
     if character == None:
-        character = general.Player(2, pygame.rect.Rect(0, 0, 48, 48), screen, 15, 30, (level_data[level-1]["TILE_WIDTH"], level_data[level-1]["TILE_HEIGHT"]), 5, 10, character_info)
+        character = general.Player(2, pygame.rect.Rect(800, 200, 48, 48), screen, 15, 30, (level_data[level-1]["TILE_WIDTH"], level_data[level-1]["TILE_HEIGHT"]), 5, 10, character_info)
     if character.opacity <= 0:
         character = None
         enemy_list.clear()
@@ -139,11 +134,10 @@ def player_data(screen, dt):
         level += 1
         if level == 10:
             current_screen = "Victory"
-        current_screen = "Connecting"
+        else:
+            current_screen = "Connecting"
         enemy_list.clear()
         return
-    
-
 
     return character.export_data()
 

@@ -1,5 +1,5 @@
 import pygame, Backend.Media.asset_library as asset_library
-import datetime
+import datetime, copy
 
 
 
@@ -33,7 +33,7 @@ class Title_Screen(Screen):
 
         self.__text_surface = self.__text.render("Play", True, self.__text_colour)
         self.__text_rect = self.__text_surface.get_rect()
-        self.__text_rect.center = pygame.Vector2(640, 405)
+        self.__text_rect.center = pygame.Vector2(360, 229)
         super().display(self.__text_surface, self.__text_rect)
 
         mouse_pos = pygame.mouse.get_pos()
@@ -105,43 +105,55 @@ class Connector_Screen(Screen):
 class Death_Screen(Screen):
     def __init__(self, screen, opacity, fade_speed):
         super().__init__(screen, opacity, fade_speed)
+        self.__start_fade_speed = copy.copy(self.fade_speed)
+
         self.__faded = False
         self.fade_start = datetime.datetime.now()
-        self.__text = asset_library.fonts["title_screen font"]
+        self.__text1 = asset_library.fonts["title_screen font"]
+        self.__text2 = asset_library.fonts["small font"]
 
-        self.width = self.__text.size("You Died")[0] - 3
-        self.height = self.__text.get_ascent()
-        self.__text_surface = self.__text.render("You Died", True, "grey90")
-        self.__text_rect = self.__text_surface.get_rect()
-        self.__text_rect.topleft = pygame.Vector2(self.screen.get_width() - self.width, self.screen.get_height() - self.height - 250) // 2
+        self.width1 = self.__text1.size("You Died")[0] - 3
+        self.height1 = self.__text1.get_ascent()
+        self.__text_surface1 = self.__text1.render("You Died", True, "grey90")
+        self.__text_rect1 = self.__text_surface1.get_rect()
+        self.__text_rect1.topleft = pygame.Vector2(self.screen.get_width() - self.width1, self.screen.get_height() - self.height1 - 250) // 2
+
+        self.width2 = self.__text2.size("(Press anywhere to continue)")[0] - 3
+        self.height2 = self.__text2.get_ascent()
+        self.__text_surface2 = self.__text2.render("(Press anywhere to continue)", True, "grey90")
+        self.__text_rect2 = self.__text_surface2.get_rect()
+        self.__text_rect2.topleft = pygame.Vector2(self.screen.get_width() - self.width2, self.screen.get_height() - self.height2 - 100) // 2
+
 
 
     def display(self):
         #super().display(sprite_data, sprite_rect)
 
-        super().display(self.__text_surface, self.__text_rect)
+        super().display(self.__text_surface1, self.__text_rect1)
+        super().display(self.__text_surface2, self.__text_rect2)
 
     
     def fade(self):
         if self.opacity >= 255:
             self.opacity = 255
             self.__faded = True
-        if pygame.mouse.get_pressed():
-            self.fade_speed *= -1
+        if self.__faded and (pygame.mouse.get_pressed()[0] or pygame.mouse.get_pressed()[1] or pygame.mouse.get_pressed()[2]):
+            self.fade_speed = -self.__start_fade_speed
             self.__faded = False
-            print("HO")
         
         super().fade(-self.fade_speed)
-        print(self.opacity)
         if self.opacity < 0:
             return True
 
-class Death_Screen(Screen):
+class Victory_Screen(Screen):
     def __init__(self, screen, opacity, fade_speed):
         super().__init__(screen, opacity, fade_speed)
+
+        self.__start_fade_speed = copy.copy(self.fade_speed)
         self.__faded = False
         self.fade_start = datetime.datetime.now()
-        self.__text = asset_library.fonts["title_screen font"]
+        self.__text = asset_library.fonts["victory font"]
+        self.__text2 = asset_library.fonts["small font"]
 
         self.width = self.__text.size("Congratulations")[0] - 3
         self.height = self.__text.get_ascent()
@@ -149,20 +161,27 @@ class Death_Screen(Screen):
         self.__text_rect = self.__text_surface.get_rect()
         self.__text_rect.topleft = pygame.Vector2(self.screen.get_width() - self.width, self.screen.get_height() - self.height - 250) // 2
 
+        self.width2 = self.__text2.size("(Press anywhere to continue)")[0] - 3
+        self.height2 = self.__text2.get_ascent()
+        self.__text_surface2 = self.__text2.render("(Press anywhere to continue)", True, "grey90")
+        self.__text_rect2 = self.__text_surface2.get_rect()
+        self.__text_rect2.topleft = pygame.Vector2(self.screen.get_width() - self.width2, self.screen.get_height() - self.height2 + 300) // 2
+
+
 
     def display(self):
         super().display(self.__text_surface, self.__text_rect)
+        super().display(self.__text_surface2, self.__text_rect2)
 
     
     def fade(self):
         if self.opacity >= 255:
             self.opacity = 255
             self.__faded = True
-        if pygame.mouse.get_pressed():
-            self.fade_speed *= -1
+        if self.__faded and (pygame.mouse.get_pressed()[0] or pygame.mouse.get_pressed()[1] or pygame.mouse.get_pressed()[2]):
+            self.fade_speed = -self.__start_fade_speed
             self.__faded = False
         
         super().fade(-self.fade_speed)
-        print(self.opacity)
         if self.opacity < 0:
             return True

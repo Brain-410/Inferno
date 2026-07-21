@@ -3,13 +3,11 @@ import os, pygame
 pygame.init()
 
 TILE_SIZE = 30
-N = 99
+N = 120
 
 spritesheet = pygame.image.load("Backend\\Media\\Assets\\Tileset.png")
 width, height = spritesheet.get_size()
 cols = width / TILE_SIZE
-
-count = 0
 
 for i in range(N):
     col = i % cols
