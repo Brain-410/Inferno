@@ -1,15 +1,15 @@
 import pygame, copy, random, json, datetime
-import Backend.general as general, Backend.screens as screens
+import Backend.general as general, Backend.screens as screens, Backend.Media.asset_library as asset_library
 
 MAX_ENEMIES = 5
 
-level_data = [{}, {}, {}, {}, {}, {}, {}, {}, {}]
+level_data = [{}, {}, {}, {}]
 
 
 levels = {
     1: "Limbo",
-    2: "Greed",
-    3: "Wrath",
+    2: "Gluttony",
+    3: "Heresy",
     4: "Treachery"
 }
 
@@ -28,8 +28,6 @@ user_interface_object = None
 general_object = general.Tile()
 enemy_list = []
 attack_objects = []
-collision_object_data = []
-run = False
 level = 1
 title_screen = None
 connecting_screen = None
@@ -84,7 +82,7 @@ def attacks(dt):
         obj.display()
         obj.dt = dt
         match obj.type:
-            case "Mace":
+            case "Force":
                 if obj.move():
                     attack_objects.remove(obj)
             case "Holy Ray":
@@ -96,11 +94,11 @@ def attacks(dt):
         
 
 def player_data(screen, dt):
-    global character, run, current_screen, character_info, level, enemy_list
+    global character, current_screen, character_info, level, enemy_list
     if current_screen != "Play":
         return
     if character == None:
-        character = general.Player(2, pygame.rect.Rect(800, 200, 48, 48), screen, 15, 30, (level_data[level-1]["TILE_WIDTH"], level_data[level-1]["TILE_HEIGHT"]), 5, 10, character_info)
+        character = general.Player(2, pygame.rect.Rect(1000, 300, 48, 48), screen, 15, 30, (level_data[level-1]["TILE_WIDTH"], level_data[level-1]["TILE_HEIGHT"]), 5, 10, character_info)
     if character.opacity <= 0:
         character = None
         enemy_list.clear()
@@ -123,8 +121,8 @@ def player_data(screen, dt):
     character.restore()
     attack_data = character.ability()
 
-    if attack_data[0] == "Mace":
-        attack_objects.append(general.Mace(screen, *attack_data[1]))
+    if attack_data[0] == "Force":
+        attack_objects.append(general.Force(screen, *attack_data[1]))
     elif attack_data[0] == "Holy_Ray":
         attack_objects.append(general.Holy_Ray(screen, *attack_data[1])) 
     
@@ -171,7 +169,7 @@ def enemies(screen, dt, player_attributes): # Demons, Bosses, etc. NPCs with mov
         enemy.move(player_attributes)
         enemy.collide(level_data[level-1]["data"], player_attributes)
         for attack in attack_objects:
-            if attack.type == "Mace":
+            if attack.type == "Force":
                 enemy.take_damage(attack.rect_data, attack.damage)
             
 
@@ -200,22 +198,26 @@ def summon_enemy(player_true_data):
     global current_screen, recent_enemy_spawn_time
     if current_screen != "Play":
         return
-    if random.randint(0, 2) == 1 and len(enemy_list) < MAX_ENEMIES and (datetime.datetime.now() - recent_enemy_spawn_time).total_seconds() > 2:
+    if len(enemy_list) < MAX_ENEMIES and (datetime.datetime.now() - recent_enemy_spawn_time).total_seconds() > 1:
         recent_enemy_spawn_time = datetime.datetime.now()
         match random.randint(1, 4):
             case 1: # Top
-                position_x = random.randint(0, 1280)
+                position_x = random.randint(0, 720)
                 position_y = -50
             case 2: # Left
                 position_x = -50
-                position_y = random.randint(0, 800)
+                position_y = random.randint(0, 448)
             case 3: # Right
-                position_x = 1330
-                position_y = random.randint(0, 800)
+                position_x = 1220
+                position_y = random.randint(0, 448)
             case 4: # Bottom
-                position_x = random.randint(0, 1280)
-                position_y = 850
-        enemy_list.append(general.Enemy(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 500, 50, 50, 30, player_true_data, enemy_list, 5, character))
+                position_x = random.randint(0, 720)
+                position_y = 500
+
+        if random.randint(0, 5) == 1 and (level == 2 or level == 3) or level == 4:
+            enemy_list.append(general.Enemy(pygame.rect.Rect(position_x, position_y, 48, 48), 80, 30, 500, 65 + 20 * level, 65 + 20*level, 50 + 10*level, player_true_data, enemy_list, 8 + 5*level, character, -3.1))
+        else:
+            enemy_list.append(general.Enemy(pygame.rect.Rect(position_x, position_y, 48, 48), 50, 30, 500, 25 + 10 * level, 25 + 10 * level, 20 + 10*level, player_true_data, enemy_list, 5 + 3*level, character, -2.1))
         enemy_list.sort(key=lambda x:  x.visual_data.left)
 
 def objects(screen, player_attributes): #Floor, Walls, etc. NPCs without movement
@@ -262,5 +264,3 @@ def user_interface(screen, player_variables):
     user_interface_object.mana_bar()
     user_interface_object.exp_bar()
     user_interface_object.level()
-    user_interface_object.minimap()
-    user_interface_object.settings()
