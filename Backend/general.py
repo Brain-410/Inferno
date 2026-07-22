@@ -241,7 +241,6 @@ class Enemy(Entity):
                 self.time_of_last_attack = datetime.datetime.now()
                 self.__player.take_damage(self.damage, self.__dx)
             while self.visual_data.colliderect(new_pos):
-                print("1")
                 self.position -= self.__dx
 
                 self.true_data[0] -= self.__dx.x
@@ -383,7 +382,7 @@ class Player(Entity):
         self.__velocity = pygame.Vector2(0, 0)
         self.__asset_index = -1.1
         self.opacity = 255
-        self.alert = False
+        self.__alert = False
 
         self.new_level = False
 
@@ -397,7 +396,7 @@ class Player(Entity):
         self.__exp = 0
         self.__level += 1
 
-        self.damage += 5
+        self.damage += 2
         self.__max_mana += self.__mana_coefficient
         self.__current_mana += self.__mana_coefficient
         self.max_hp += self.__hp_coefficient
@@ -455,7 +454,7 @@ class Player(Entity):
     def ability(self):
         time_difference = (datetime.datetime.now() - self.time_of_last_attack).total_seconds()
         if time_difference > 5:
-            self.alert = False
+            self.__alert = False
         #Holy laser beam 
         if pygame.mouse.get_pressed()[0] and self.__current_mana >= self.__laser_mana and time_difference > 1.5: # Left mouse button, 3s cooldown
             self.__healing = False
@@ -467,12 +466,12 @@ class Player(Entity):
             damage = self.damage
             asset_index = -4
             object_data = pygame.rect.Rect(self.screen.get_width()//2, self.screen.get_height()//2, 24, 24)
-            self.alert = True
+            self.__alert = True
             return ["Holy_Ray", [object_data, time, damage, asset_index, angle, 480]]
 
 
         #Force
-        elif pygame.mouse.get_pressed()[2] and time_difference > 0.7: # Right mouse button, 0.5s cooldown
+        elif pygame.mouse.get_pressed()[2] and time_difference > 0.7 and self.__current_mana >= 1: # Right mouse button, 0.5s cooldown
             self.__current_mana -= 1
             self.__healing = False
             self.time_of_last_attack = datetime.datetime.now()
@@ -481,7 +480,7 @@ class Player(Entity):
             time = 0.4
             damage = self.damage
             asset_index = -5
-            self.alert = True
+            self.__alert = True
             
            
             match self.__asset_index:
@@ -595,7 +594,9 @@ class Player(Entity):
                 if object_list[index] in asset_library.level_change_tiles:
                     self.new_level = True
                 if object_list[index] in asset_library.damage_tiles:
-                    self.hp -= 8
+                    if (datetime.datetime.now() - self.last_took_damage).total_seconds() > 0.7:
+                        self.hp -= 8
+                        self.last_took_damage = datetime.datetime.now()
         self.__true_center += self.__velocity
         self.__rect_data.center = self.__true_center
         self.__camera_pos += self.__velocity
@@ -628,7 +629,7 @@ class Player(Entity):
 
             "new level": self.new_level,
 
-            "alert": self.alert
+            "alert": self.__alert
         }
         return data
 

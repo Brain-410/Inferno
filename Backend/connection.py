@@ -14,7 +14,7 @@ levels = {
 }
 
 for level in levels:
-    with open(f"Backend\\Media\\Level_Data\\level{level}.json", "r") as file:
+    with open(f"Backend/Media/Level_Data/level{level}.json", "r") as file:
         level_data[level-1]["data"] = json.load(file)
         level_data[level-1]["object_list"] =  level_data[level-1]["data"]["layers"][0]["data"]
         level_data[level-1]["TILE_WIDTH"] =  level_data[level-1]["data"]["tilewidth"]
@@ -28,7 +28,13 @@ user_interface_object = None
 general_object = general.Tile()
 enemy_list = []
 attack_objects = []
-level = 1
+level = 4
+spawn_positions = {
+    1: pygame.Vector2(1600, 340),
+    2: pygame.Vector2(1300, 500),
+    3: pygame.Vector2(1200, 400),
+    4: pygame.Vector2(1400, 500),
+}
 title_screen = None
 connecting_screen = None
 death_screen = None
@@ -98,7 +104,7 @@ def player_data(screen, dt):
     if current_screen != "Play":
         return
     if character == None:
-        character = general.Player(2, pygame.rect.Rect(1000, 300, 48, 48), screen, 15, 30, (level_data[level-1]["TILE_WIDTH"], level_data[level-1]["TILE_HEIGHT"]), 5, 10, character_info)
+        character = general.Player(2, pygame.rect.Rect(spawn_positions[level].x, spawn_positions[level].y, 48, 48), screen, 15, 30, (level_data[level-1]["TILE_WIDTH"], level_data[level-1]["TILE_HEIGHT"]), 5, 10, character_info)
     if character.opacity <= 0:
         character = None
         enemy_list.clear()
@@ -130,7 +136,11 @@ def player_data(screen, dt):
         character_info = character.change_level()
         character = None
         level += 1
-        if level == 10:
+        if level == 5:
+            enemy_list.clear()
+            character = None
+            character_info = copy.copy(character_info_base)
+            level = 1
             current_screen = "Victory"
         else:
             current_screen = "Connecting"

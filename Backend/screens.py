@@ -19,37 +19,118 @@ class Title_Screen(Screen):
         super().__init__(screen, opacity, fade_speed)
         self.__image = asset_library.asset_library[-10]
         self.__text = asset_library.fonts["title_screen font"]
+        self.__small_text = asset_library.fonts["medium font"]
+        self.__help_screen_text = asset_library.fonts["help screen font"]
+        self.__large_text = asset_library.fonts["level name font"]
         self.__button_colour = "orange2"
+        self.__button_colour2 = "orange2"
         self.__text_colour = "grey80"
+        self.__text_colour2 = "grey80"
         self.__transition = False
 
-    def buttons(self):
+        self.__sub_screen = "Title"
+
+        self.__owner_text = asset_library.fonts["small font"].render("By Baidyn M", True, (220, 220, 220))
+
+        # Title Tab
+
         self.__play_button = pygame.rect.Rect(self.screen.get_width()//2 - 125, self.screen.get_height()//2 - 50, 250, 100)
         self.__button_surface = pygame.Surface((300 , 150), pygame.SRCALPHA)
-        pygame.draw.rect(self.__button_surface, self.__button_colour, pygame.rect.Rect(0, 0, 250, 100), border_radius=20)
-        super().display(self.__button_surface, self.__play_button)
-        #self.screen.blit(self.__button_surface, (0, 0))
-
 
         self.__text_surface = self.__text.render("Play", True, self.__text_colour)
         self.__text_rect = self.__text_surface.get_rect()
         self.__text_rect.center = pygame.Vector2(360, 229)
-        super().display(self.__text_surface, self.__text_rect)
 
-        mouse_pos = pygame.mouse.get_pos()
-        if self.__play_button.collidepoint(mouse_pos):
-            self.__button_colour = "orange4"
-            self.__text_colour = "grey60"
-            if pygame.mouse.get_pressed()[0]:
-                self.__transition = True
-        else:
-            if self.__transition == False:
-                self.__button_colour = "orange2"
-                self.__text_colour = "grey80"
+        self.__play_button3 = pygame.rect.Rect(self.screen.get_width()//2 - 80, self.screen.get_height()//2 + 100, 250, 100)
+        self.__button_surface3 = pygame.Surface((300 , 150), pygame.SRCALPHA)
+        self.__text_surface3 = self.__large_text.render("Help", True, self.__text_colour2)
+        self.__text_rect3 = self.__text_surface3.get_rect()
+        self.__text_rect3.center = pygame.Vector2(365, 365)
+
+        # Settings Tab
+        self.__background_rect = pygame.rect.Rect(00, 00, 700, 428)
+        self.__background_surface = pygame.Surface((680, 408), pygame.SRCALPHA)
+        self.__background_surface.set_alpha(240)
+
+        self.__back_button = pygame.rect.Rect(0, 0, 100, 50)
+        self.__back_button_surface = pygame.Surface((150 , 100), pygame.SRCALPHA)
+
+        self.__text_surface2 = self.__small_text.render("Back", True, self.__text_colour)
+        self.__text_rect2 = self.__text_surface2.get_rect()
+        self.__text_rect2.topleft = pygame.Vector2(30, 32)
+
+        self.__help_text = "Use WASD keys to move\nUse the left mouse button to shoot a laser\nUse the right mouse button for a melee attack\nPress Tab to heal\nHint 1: look for gates\nHint 2: Use a mouse\nGood Luck!"
+
+        self.__back_colour = "indianred4"
+
+    def buttons(self):
+        if self.__sub_screen == "Title":
+            pygame.draw.rect(self.__button_surface, self.__button_colour, pygame.rect.Rect(0, 0, 250, 100), border_radius=20)
+            super().display(self.__button_surface, self.__play_button)
+            super().display(self.__text_surface, self.__text_rect)
+
+            pygame.draw.rect(self.__button_surface3, self.__button_colour2, pygame.rect.Rect(0, 0, 160, 70), border_radius=20)
+            super().display(self.__button_surface3, self.__play_button3)
+            super().display(self.__text_surface3, self.__text_rect3)
+
+
+
+            mouse_pos = pygame.mouse.get_pos()
+            if self.__play_button.collidepoint(mouse_pos):
+                self.__button_colour = "orange4"
+                self.__text_colour = "grey60"
+                if pygame.mouse.get_pressed()[0]: #Start Game
+                    self.__transition = True
+            else:
+                if self.__transition == False:
+                    self.__button_colour = "orange2"
+                    self.__text_colour = "grey80"
+            if self.__play_button3.collidepoint(mouse_pos):
+                self.__button_colour2 = "orange4"
+                self.__text_colour2 = "grey60"
+                if pygame.mouse.get_pressed()[0]: #Switch to help tab
+                    self.__sub_screen = "Settings"
+            else:
+                if self.__transition == False:
+                    self.__button_colour2 = "orange2"
+                    self.__text_colour2 = "grey80"
+            
+    
+        elif self.__sub_screen == "Settings":
+
+            # Overlay
+            pygame.draw.rect(self.__background_surface, "indianred", self.__background_rect)
+            self.screen.blit(self.__background_surface, (20, 22))
+
+            # Back button
+            pygame.draw.rect(self.__back_button_surface, self.__back_colour, pygame.rect.Rect(20, 22, 100, 50), border_radius=20)
+            super().display(self.__back_button_surface, self.__back_button)
+
+            super().display(self.__text_surface2, self.__text_rect2)
+
+            self.__location = pygame.rect.Rect(20, 22, 100, 50)
+
+
+            for i, line in enumerate(self.__help_text.split("\n")):
+                surface = self.__help_screen_text.render(line, True, (220, 220, 220))
+                current_y = 90 + i * 48
+
+                self.screen.blit(surface, (90, current_y))
+
+
+            mouse_pos = pygame.mouse.get_pos()
+            if self.__location.collidepoint(mouse_pos):
+                self.__back_colour = (130, 0, 0)
+                if pygame.mouse.get_pressed()[0]:
+                    self.__sub_screen = "Title"
+            else:
+                self.__back_colour = "indianred4"
+
 
     def display(self):
         self.__image_rect = self.__image.get_rect()
         super().display(self.__image, self.__image_rect)
+        self.screen.blit(self.__owner_text, (590,30))
 
     def fade(self):
         if self.__transition == True:
@@ -161,6 +242,12 @@ class Victory_Screen(Screen):
         self.__text_rect = self.__text_surface.get_rect()
         self.__text_rect.topleft = pygame.Vector2(self.screen.get_width() - self.width, self.screen.get_height() - self.height - 250) // 2
 
+        self.width3 = self.__text.size("You win!")[0] - 3
+        self.height3 = self.__text.get_ascent()
+        self.__text_surface3 = self.__text.render("You win!", True, "grey90")
+        self.__text_rect3 = self.__text_surface3.get_rect()
+        self.__text_rect3.topleft = pygame.Vector2(self.screen.get_width() - self.width3, self.screen.get_height() - self.height3 - 50) // 2
+
         self.width2 = self.__text2.size("(Press anywhere to continue)")[0] - 3
         self.height2 = self.__text2.get_ascent()
         self.__text_surface2 = self.__text2.render("(Press anywhere to continue)", True, "grey90")
@@ -172,6 +259,7 @@ class Victory_Screen(Screen):
     def display(self):
         super().display(self.__text_surface, self.__text_rect)
         super().display(self.__text_surface2, self.__text_rect2)
+        super().display(self.__text_surface3, self.__text_rect3)
 
     
     def fade(self):
